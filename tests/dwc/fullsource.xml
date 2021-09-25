@@ -1,0 +1,38 @@
+<metadata code="AFD" date="2018-10-03">
+    <title>Australian Faunal Directory</title>
+    <organization>
+        <organizationName>Australian Faunal Directory</organizationName>
+        <electronicMailAddress>australianfaunaldirectory@environment.gov.au</electronicMailAddress>
+        <onlineUrl>http://www.environment.gov.au/biodiversity/abrs/online-resources/fauna/afd/home</onlineUrl>
+    </organization>
+    <description>Data from the Australian Faunal Directory (AFD) transformed into DwCA Taxon format, for loading into
+        the Atlas of Living Australia's name indexes.
+    </description>
+    <geographicCoverage>
+        <geographicDescription>Australia</geographicDescription>
+    </geographicCoverage>
+    <taxonomicCoverage>
+        <generalTaxonomicCoverage>Covers Australian Fauna</generalTaxonomicCoverage>
+        <taxonomicClassification>
+            <taxonRankName>Kingdom</taxonRankName>
+            <taxonRankValue>Animalia</taxonRankValue>
+        </taxonomicClassification>
+    </taxonomicCoverage>
+    <citation>Atlas of Living Australia &amp; ABRS 2009. Australian Faunal Directory. Australian Biological Resources
+        Study, Canberra.
+    </citation>
+    <publisher>
+        <organization>
+            <organizationName>The Atlas of Living Australia</organizationName>
+            <address>
+                <deliveryPoint>GPO Box 1700</deliveryPoint>
+                <city>Canberra</city>
+                <administrativeArea>ACT</administrativeArea>
+                <postalCode>2601</postalCode>
+                <country>Australia</country>
+            </address>
+            <electronicMailAddress>info@ala.org.au</electronicMailAddress>
+            <onlineUrl>http://www.ala.org.au</onlineUrl>
+        </organization>
+    </publisher>
+</metadata>
