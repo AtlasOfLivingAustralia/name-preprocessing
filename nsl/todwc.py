@@ -1,4 +1,5 @@
 import importlib
+import re
 from typing import Dict
 
 import attr
@@ -8,6 +9,16 @@ import dwc.schema
 from processing.dataset import Port, Dataset, Keys, Record, Index, IndexType
 from processing.node import ProcessingContext, ProcessingException
 from processing.transform import ThroughTransform, choose, strip_markup, normalise_spaces
+
+BAD_URL = re.compile("\\.org\\.au([^/])")
+def _fix_url(s: str):
+    """Fix bad URLs of the for id.biodiversity.org.autaxon"""
+    if s is None or len(s) == 0:
+        return None
+    search = BAD_URL.search(s)
+    if not search:
+        return s
+    return s[:search.start()] + ".org.au/" + search[1] + s[search.end():]
 
 class NameFormatter:
     def __init__(self):
@@ -105,7 +116,7 @@ class NslToDwcTaxonTransform(ThroughTransform):
 
         :return: A composed record, or null for no record
         """
-        taxonID = record.taxonID
+        taxonID = _fix_url(record.taxonID)
         if taxonID is None:
             raise ProcessingException("Record has no taxonID")
         scientificName = choose(record.name_canonicalName, record.canonicalName)
@@ -115,20 +126,24 @@ class NslToDwcTaxonTransform(ThroughTransform):
         nameFormatted = self.formatter.format(record.name_scientificNameHTML, taxonRank)
         dwc = {
             'taxonID': taxonID,
-            self.link_term: reference.taxonID if reference is not None else None,
+            self.link_term: _fix_url(reference.taxonID) if reference is not None else None,
             'datasetID': context.get_default('datasetID'),
-            'nomenclaturalCode': choose(record.name_nomenclaturalCode, record.nomenclaturalCode, context.get_default('nomenclaturalCode')),
+            'nomenclaturalCode': choose(record.kingdom_nomenclaturalCode, record.name_nomenclaturalCode, record.nomenclaturalCode, context.get_default('nomenclaturalCode')),
             'scientificName': scientificName,
             'scientificNameAuthorship': choose(record.name_scientificNameAuthorship, record.scientificNameAuthorship),
             'taxonRank': taxonRank,
-            'taxonConceptID': record.taxonConceptID,
-            'scientificNameID': record.scientificNameID,
+            'taxonConceptID': _fix_url(record.taxonConceptID),
+            'scientificNameID': _fix_url(record.scientificNameID),
             'taxonomicStatus': choose(record.mappedTaxonomicStatus, self.defaultStatus),
             'nomenclaturalStatus': record.nomenclaturalStatus,
+            'kingdom': choose(record.kingdom, record.name_kingdom),
+            'class': record.clazz,
+            'subclass': record.subclass,
+            'family': choose(record.family, record.name_family),
             'establishmentMeans': None,
-            'nameAccordingToID': record.nameAccordingToID,
+            'nameAccordingToID': _fix_url(record.nameAccordingToID),
             'nameAccordingTo': strip_markup(record.nameAccordingTo),
-            'namePublishedInID': record.namePublishedInID,
+            'namePublishedInID': _fix_url(record.namePublishedInID),
             'namePublishedIn': strip_markup(record.name_namePublishedIn),
             'namePublishedInYear': record.name_namePublishedInYear,
             'nameComplete': choose(record.name_scientificName, record.scientificName),
@@ -137,6 +152,8 @@ class NslToDwcTaxonTransform(ThroughTransform):
             'provenance': None,
             'source': taxonID
         }
+        if dwc['nomenclaturalCode'] != record.nomenclaturalCode:
+            self.logger.warn("Mismatch in nomenclatural code for " + taxonID + " record contains " + record.nomenclaturalCode + " output is " + dwc['nomenclaturalCode'] + " for kingdom " + dwc['kingdom'])
         errors = self.output.schema.validate(dwc)
         if errors:
             raise ProcessingException("Invalid mapping " + str(errors))
@@ -167,7 +184,7 @@ class NslAdditionalToDwcTransform(ThroughTransform):
 
         :return: A composed record, or null for no record
         """
-        taxonID = record.scientificNameID
+        taxonID = _fix_url(record.scientificNameID)
         if taxonID is None:
             raise ProcessingException("Record has no taxonID")
         scientificName = record.canonicalName
@@ -190,14 +207,14 @@ class NslAdditionalToDwcTransform(ThroughTransform):
             'specificEpithet': record.specificEpithet,
             'infraspecificEpithet': record.infraspecificEpithet,
             'taxonRank': taxonRank,
-            'taxonConceptID': record.scientificNameID,
-            'scientificNameID': record.scientificNameID,
+            'taxonConceptID': _fix_url(record.scientificNameID),
+            'scientificNameID': _fix_url(record.scientificNameID),
             'taxonomicStatus': self.defaultStatus,
             'nomenclaturalStatus': record.nomenclaturalStatus,
             'establishmentMeans': None,
-            'nameAccordingToID': record.nameAccordingToID,
+            'nameAccordingToID': _fix_url(record.nameAccordingToID),
             'nameAccordingTo': record.nameAccordingTo,
-            'namePublishedInID': record.namePublishedInID,
+            'namePublishedInID': _fix_url(record.namePublishedInID),
             'namePublishedIn': record.name_namePublishedIn,
             'namePublishedInYear': record.name_namePublishedInYear,
             'nameComplete': record.scientificName,
@@ -283,12 +300,12 @@ class VernacularToDwcTransform(ThroughTransform):
         """
         if accepted is None:
             return None
-        taxonID = accepted.taxonID
+        taxonID = _fix_url(accepted.taxonID)
         if taxonID is None:
             raise ProcessingException("Record has no taxonID")
         dwc = {
             'taxonID': taxonID,
-            'nameID': record.common_name_id,
+            'nameID': _fix_url(record.common_name_id),
             'datasetID': context.get_default('datasetID'),
             'vernacularName': record.common_name,
             'status': self.status,

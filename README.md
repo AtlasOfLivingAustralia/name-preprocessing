@@ -35,7 +35,6 @@ By default, `<base>/output`
 Each data source has a subdirectory containing the resulting DwCA.
 For example, the output directory for CAAB data is `output/CAAB`
 
-
 ### Working directories
 
 Directories that hold intermediate results, error output and execution graphs.

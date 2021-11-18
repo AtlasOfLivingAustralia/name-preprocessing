@@ -4,7 +4,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 from copy import deepcopy
 from inspect import signature
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import attr
 import marshmallow
@@ -52,6 +52,12 @@ def strip_markup(s: str):
     s = s.replace('&gt;', '>')
     s = s.replace('&amp;', '&')
     return normalise_spaces(s)
+
+def _get_or_default(record: Record, context: ProcessingContext, field: str, key: str):
+    val = record.data.get(field)
+    if val is None:
+        val = context.get_default(key)
+    return val
 
 class _TriggerSchema(Schema):
     triggered = fields.Boolean()
@@ -518,6 +524,72 @@ class MapTransform(ThroughTransform):
         :return:
         """
         return lambda r, c: c.get_default(key)
+
+    @classmethod
+    def orDefault(cls, transform: Callable, key: str):
+        """
+        Mapping that adds a default lookup on a context
+
+        :param transform The actual mapping to use to get the data
+        :param key: The context key
+        :return:
+        """
+        sig = signature(transform)
+        nargs = len(sig.parameters)
+        if nargs > 2:
+            raise ValueError("Can't handle 3+ parameter mapping")
+        return lambda r, c: cls._or_default(r, c, transform, nargs, key)
+
+    @classmethod
+    def _or_default(cls, record: Record, context: ProcessingContext, transform: Callable, nargs: int, key: str):
+        if nargs == 0:
+            val = transform()
+        elif nargs == 1:
+            val = transform(record)
+        elif nargs == 2:
+            val = transform(record, context)
+        else:
+            val = None
+        if val is None:
+            val = context.get_default(key)
+        return val
+
+    @classmethod
+    def choose(cls, *args):
+        """
+        Choose from a variety of possibilities
+
+        :param args: The choices, either field names or lambda expressions
+
+        :return: A transform that will choose the first non-none value
+        """
+        choices = []
+        for arg in args:
+            if isinstance(arg, str):
+                transform = (1, cls._getter(arg))
+            elif isinstance(arg, callable):
+                sig = signature(transform)
+                nargs = len(sig.parameters)
+                transform = (nargs, arg)
+            else:
+                raise ValueError("Can't make choice out of " + arg)
+            choices.append(transform)
+        return lambda r, c: cls._choose(r, c, choices)
+
+    @classmethod
+    def _choose(cls, record: Record, context: ProcessingContext, choices: List[Tuple[int, Callable]]):
+        for (nargs, transform) in choices:
+            if nargs == 0:
+                val = transform()
+            elif nargs == 1:
+                val = transform(record)
+            elif nargs == 2:
+                val = transform(record, context)
+            else:
+                val = None
+            if val is not None:
+                return val
+        return None
 
     @classmethod
     def dateparse(cls, field, *args):

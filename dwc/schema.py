@@ -81,6 +81,11 @@ class VernacularNameSchema(Schema):
     Schema for vernacular names with only a scientific name to match, rather than a taxonId
     """
     scientificName = fields.String(metadata={ 'export': True })
+    kingdom = fields.String(missing=None)
+    phylum = fields.String(missing=None)
+    class_ = fields.String(missing=None, data_key='class', uri='http://rs.tdwg.org/dwc/terms/class')
+    order = fields.String(missing=None)
+    family = fields.String(missing=None)
     vernacularName = fields.String(metadata={ 'export': True })
     nameID = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/nameID')
     datasetID = fields.String(missing=None, metadata={ 'export': True })
@@ -89,6 +94,7 @@ class VernacularNameSchema(Schema):
     temporal = fields.String(missing=None, uri='http://purl.org/dc/terms/temporal')
     locationID = fields.String(missing=None)
     locality = fields.String(missing=None)
+    stateProvince = fields.String(missing=None)
     countryCode = fields.String(missing=None)
     sex = fields.String(missing=None)
     lifeStage = fields.String(missing=None)
@@ -97,6 +103,7 @@ class VernacularNameSchema(Schema):
     organismPart = fields.String(missing=None, uri='http://rs.gbif.org/terms/1.0/organismPart')
     labels = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/labels')
     nameAccordingTo = fields.String(missing=None)
+    namePublishedIn = fields.String(missing=None)
     taxonRemarks = fields.String(missing=None)
     provenance = fields.String(missing=None, uri='http://purl.org/dc/terms/provenance')
     source = fields.String(missing=None, uri='http://purl.org/dc/terms/source')

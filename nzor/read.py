@@ -54,9 +54,9 @@ def reader() -> Orchestrator:
     language_map = CsvSource.create("language_map", language_file, "ala", nzor_language_map_schema)
     nomenclatural_code_map = CsvSource.create("nomenclatual_code_map", nomenclatural_code_file, "ala", nomenclatural_code_schema)
     taxon_source = CsvSource.create("taxon_source", taxon_file, 'excel-tab', nzor_taxon_schema, no_errors=False)
-    taxon_coded = LookupTransform.create("taxon_coded", taxon_source.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', lookup_map= { 'nomenclaturalCode': 'defaultNomenclaturalCode' })
+    taxon_coded = LookupTransform.create("taxon_coded", taxon_source.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', lookup_map= { 'nomenclaturalCode': 'kingdomNomenclaturalCode' })
     taxon_recoded = MapTransform.create("taxon_recoded", taxon_coded.output, nzor_taxon_schema, {
-       'nomenclaturalCode': (lambda r: choose(r.nomenclaturalCode, r.defaultNomenclaturalCode))
+       'nomenclaturalCode': (lambda r: choose(r.kingdomNomenclaturalCode, r.nomenclaturalCode))
     }, auto=True)
     taxon_ranked = LookupTransform.create("taxon_ranked",taxon_recoded.output, rank_map.output, ('taxonRank', 'nomenclaturalCode'), ('rank', 'nomenclaturalCode'), lookup_map={ 'taxonRank': 'taxonRank1'})
     taxon_ranked_2 = LookupTransform.create("taxon_ranked_2", taxon_ranked.output, rank_map.output, 'taxonRank', 'rank', lookup_type=IndexType.FIRST, lookup_map={ 'taxonRank': 'taxonRank2'})

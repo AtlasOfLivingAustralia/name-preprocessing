@@ -30,6 +30,7 @@ class SourceSchema(Schema):
     geographicCoverage = fields.String(missing=None)
     taxonomicCoverage = fields.String(missing=None)
     sourceUrl = fields.String(missing=None)
+    vernacularStatus = fields.String(missing=None)
 
 parser = argparse.ArgumentParser(description='Import natureshare data and convert into a DwC file')
 parser.add_argument('-d', '--directory', type=str, help='Base directory', default='.')
@@ -60,7 +61,27 @@ else:
 
 sources = CsvSource.create("sources", source_file, "ala", SourceSchema(), predicate=source_filter)
 dummy = NullSink.create("dummy")
-selector = Selector.create("selector", sources.output, 'job', 'dir', 'inputDir', None, 'configDir', None, afd.read.reader(), ala.read.reader(), ausfungi.read.reader(), caab.read.reader(), col.read.reader(), nsl.read.reader(), nsl.read.additional_reader(), nzor.read.reader(), dummy)
+selector = Selector.create(
+    "selector",
+    sources.output,
+    'job',
+    'dir',
+    'inputDir',
+    None,
+    'configDir',
+    None,
+    afd.read.reader(),
+    ala.read.reader(),
+    ala.read.vernacular_reader(),
+    ala.read.vernacular_list_reader(),
+    ausfungi.read.reader(),
+    caab.read.reader(),
+    col.read.reader(),
+    nsl.read.reader(),
+    nsl.read.additional_reader(),
+    nzor.read.reader(),
+    dummy
+)
 
 orchestator = Orchestrator('all', [sources, selector])
 defaults = {

@@ -1,5 +1,6 @@
 from ala.transform import PublisherSource, CollectorySource
 from dwc.meta import MetaFile, EmlFile
+from dwc.schema import NomenclaturalCodeMapSchema
 from nsl.schema import TaxonSchema, NameSchema, CommonNameSchema, RankMapSchema, TaxonomicStatusMapSchema
 from nsl.todwc import VernacularToDwcTransform, NslToDwcTaxonTransform, NslAdditionalToDwcTransform
 from processing.dataset import Record, IndexType
@@ -48,19 +49,23 @@ def reader() -> Orchestrator:
     name_file = "names.csv"
     vernacular_name_file = "common-names.csv"
     taxonomic_status_map_file = "Taxonomic_Status_Map.csv"
+    nomenclatural_code_map_file = "Nomenclatural_Code_Map.csv"
     rank_map_file = "ranks.csv"
     taxon_schema = TaxonSchema()
     name_schema = NameSchema()
     common_name_schema = CommonNameSchema()
     rank_map_schema = RankMapSchema()
     taxonomic_status_schema = TaxonomicStatusMapSchema()
+    nomenclatural_code_schema = NomenclaturalCodeMapSchema()
 
     taxon_source = CsvSource.create("taxon_source", taxon_file, "excel", taxon_schema, no_errors=False)
     scientific_taxon = FilterTransform.create("scientific_taxon", taxon_source.output, is_scientific_taxon)
     rank_source = CsvSource.create("rank_source", rank_map_file, "ala", rank_map_schema)
     taxon_rank_lookup = LookupTransform.create("taxon_rank_lookup", scientific_taxon.output, rank_source.output, 'taxonRank', 'term', reject=True, record_unmatched=True, lookup_map={'taxonRank': 'mappedTaxonRank', 'taxonRankLevel': 'taxonRankLevel' })
+    nomenclatural_code_map = CsvSource.create("nomenclatural_code_map", nomenclatural_code_map_file, "ala", nomenclatural_code_schema)
+    taxon_coded = LookupTransform.create('taxon_coded', taxon_rank_lookup.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', record_unmatched=True, lookup_map={'nomenclaturalCode': 'kingdom_nomenclaturalCode'})
     status_source = CsvSource.create("status_source", taxonomic_status_map_file, "ala", taxonomic_status_schema)
-    taxon_status_lookup = LookupTransform.create("taxon_status_lookup", taxon_rank_lookup.output, status_source.output, 'taxonomicStatus', 'Term', reject=True, record_unmatched=True, lookup_map={'DwC': 'mappedTaxonomicStatus'}, lookup_include=['Accepted', 'Synonym', 'Misapplied', 'Unplaced', 'Excluded'])
+    taxon_status_lookup = LookupTransform.create("taxon_status_lookup", taxon_coded.output, status_source.output, 'taxonomicStatus', 'Term', reject=True, record_unmatched=True, lookup_map={'DwC': 'mappedTaxonomicStatus'}, lookup_include=['Accepted', 'Synonym', 'Misapplied', 'Unplaced', 'Excluded'])
     accepted_taxon = FilterTransform.create('accepted_taxon', taxon_status_lookup.output, is_accepted_taxon)
     synonym_taxon = FilterTransform.create('synonym_taxon', taxon_status_lookup.output, is_synonym_taxon)
     misapplied_taxon = FilterTransform.create('misapplied_taxon', taxon_status_lookup.output, is_misapplied_taxon)
@@ -103,8 +108,10 @@ def reader() -> Orchestrator:
                                 [
                                     rank_source,
                                     status_source,
+                                    nomenclatural_code_map,
                                     taxon_source,
                                     taxon_rank_lookup,
+                                    taxon_coded,
                                     taxon_status_lookup,
                                     scientific_taxon,
                                     accepted_taxon,

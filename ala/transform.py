@@ -1,13 +1,14 @@
+from typing import Dict
+
 import attr
 import marshmallow
 import requests
 
 from ala.schema import CollectorySchema
-from dwc.schema import TaxonSchema
+from dwc.schema import TaxonSchema, VernacularSchema, VernacularNameSchema
 from processing.dataset import Port, Dataset, Record
 from processing.node import ProcessingContext
 from processing.source import Source, CsvSource
-
 
 @attr.s
 class SpeciesListSource(Source):
@@ -56,6 +57,48 @@ class SpeciesListSource(Source):
         context.save(self.output, output)
         context.save(self.error, errors)
 
+@attr.s
+class VernacularListSource(Source):
+    """Read a vernacular list from the ALA species list service"""
+    service: str = attr.ib()
+    aliases: Dict[str, str] = attr.ib(factory=dict)
+
+    @classmethod
+    def create(cls, id:str, aliases={}, service="https://lists.ala.org.au/ws"):
+        schema = VernacularNameSchema()
+        output = Port.port(schema)
+        error = Port.error_port(schema)
+        return VernacularListSource(id, output, error, service, aliases)
+
+    def execute(self, context: ProcessingContext):
+        output = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        fieldmap = { (field.data_key if field.data_key is not None else field.name): field.name for field in self.output.schema.fields.values()}
+        additional = { (alias, fieldmap.get(field)) for (alias, field)  in self.aliases.items() }
+        fieldmap.update(additional)
+        dr = context.get_default('datasetID')
+        list = requests.get(self.service + "/speciesListItems/" + dr, params={'includeKVP': True}).json()
+        line = 0
+        for item in list:
+            data = dict()
+            for kv in item.get('kvpValues', []):
+                key = kv.get('key', None)
+                value = kv.get('value', None)
+                if key is not None and value is not None and key in fieldmap:
+                    data[fieldmap[key]] = value
+            data['taxonID'] = 'ALA_' + str(item['id'])
+            data['scientificName'] = item['name']
+            data['datasetID'] = item['dataResourceUid']
+            record = Record(line, data, None)
+            if data['vernacularName'] is None:
+                errors.add(Record.error(record, None, "No scientific name"))
+                self.count(self.ERROR_COUNT, record, context)
+            else:
+                output.add(record)
+                self.count(self.ACCEPTED_COUNT, record, context)
+            self.count(self.PROCESSED_COUNT, record, context)
+        context.save(self.output, output)
+        context.save(self.error, errors)
 
 @attr.s
 class CollectorySource(Source):

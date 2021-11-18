@@ -1,11 +1,11 @@
-from ala.transform import SpeciesListSource, CollectorySource, PublisherSource
+from ala.transform import SpeciesListSource, CollectorySource, PublisherSource, VernacularListSource
 from dwc.meta import MetaFile, EmlFile
 from dwc.schema import NomenclaturalCodeMapSchema, VernacularNameSchema
 from dwc.transform import DwcTaxonValidate
 from processing.orchestrate import Orchestrator
 from processing.sink import CsvSink
 from processing.source import CsvSource
-from processing.transform import LookupTransform
+from processing.transform import LookupTransform, MapTransform
 
 
 def reader() -> Orchestrator:
@@ -32,3 +32,54 @@ def reader() -> Orchestrator:
                                     dwc_eml
                                 ])
     return orchestrator
+
+
+def vernacular_reader() -> Orchestrator:
+    name_file = "vernacularName.csv"
+    name_source = CsvSource.create("name_source", name_file, 'excel', VernacularNameSchema())
+    name_transform = MapTransform.create("name_transform", name_source.output, VernacularNameSchema(), {
+       'datasetID': MapTransform.orDefault(MapTransform.choose('datasetID'), 'datasetID'),
+       'status': MapTransform.orDefault(MapTransform.choose('status'), 'vernacularStatus')
+    }, auto=True)
+    name_output = CsvSink.create("name_output", name_transform.output, "vernacularName.csv", "excel", reduce=True)
+    dwc_meta = MetaFile.create("dwc_meta", name_output)
+    publisher = PublisherSource.create("publisher")
+    dwc_eml = EmlFile.create('dwc_eml', publisher.output, publisher.output)
+    orchestrator = Orchestrator("ala_vernacular",
+                                [
+                                    name_source,
+                                    name_transform,
+                                    name_output,
+                                    dwc_meta,
+                                    publisher,
+                                    dwc_eml
+                                ])
+    return orchestrator
+
+def vernacular_list_reader() -> Orchestrator:
+    vernacular_list = VernacularListSource.create('vernacular_list', aliases={
+        'vernacular name': 'vernacularName',
+        'Notes': 'taxonRemarks'
+    })
+    species_metadata = CollectorySource.create('collectory_source')
+    name_transform = MapTransform.create("name_transform", vernacular_list.output, VernacularNameSchema(), {
+       'datasetID': MapTransform.orDefault(MapTransform.choose('datasetID'), 'datasetID'),
+       'status': MapTransform.orDefault(MapTransform.choose('status'), 'vernacularStatus')
+    }, auto=True)
+    name_output = CsvSink.create("name_output", name_transform.output, "vernacularName.csv", "excel", reduce=True)
+    dwc_meta = MetaFile.create("dwc_meta", name_output)
+    publisher = PublisherSource.create("publisher")
+    dwc_eml = EmlFile.create('dwc_eml', species_metadata.output, publisher.output)
+
+    orchestrator = Orchestrator("ala_vernacular_list",
+                                [
+                                    vernacular_list,
+                                    species_metadata,
+                                    name_transform,
+                                    name_output,
+                                    dwc_meta,
+                                    publisher,
+                                    dwc_eml
+                                ])
+    return orchestrator
+
