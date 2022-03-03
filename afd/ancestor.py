@@ -1,4 +1,4 @@
-#  Copyright (c) 2021.  Atlas of Living Australia
+#  Copyright (c) 2022.  Atlas of Living Australia
 #   All Rights Reserved.
 #
 #   The contents of this file are subject to the Mozilla Public
@@ -10,37 +10,26 @@
 #   WITHOUT WARRANTY OF ANY KIND, either express or
 #   implied. See the License for the specific language governing
 #   rights and limitations under the License.
+from attr import attr
 
-from typing import Dict
-
-import attr
-
-from processing.dataset import Port, Keys, Dataset, Record, Index
-from processing.node import ProcessingContext
+from processing.dataset import Port, Keys
 from processing.transform import Transform
 
-@attr.s
-class ParentTransform(Transform):
+attr.s
+class AncestorTransform(Transform):
     """
-    Find an actual parent for the taxon, skipping ignored parents and defaulting to
-    the kingdom.
+    Build a list of ancesotor identifiers for a taxon
     """
     input: Port = attr.ib()
     full: Port = attr.ib()
     output: Port = attr.ib()
     input_keys: Keys = attr.ib()
-    link_keys: Keys = attr.ib()
-    kingdom_rank: str = attr.ib()
-    rank_keys: Keys = attr.ib()
-    default_kingdom_name: str = attr.ib()
-    name_keys: Keys = attr.ib()
+    ancesotor_keys: Keys = attr.ib()
 
     @classmethod
-    def create(cls, id: str, input: Port, full: Port, input_keys, parent_keys, kingdom_rank: str, rank_keys, default_kingdom_name: str, name_keys, **kwargs):
-        input_keys = Keys.make_keys(input.schema, input_keys)
-        link_keys = Keys.make_keys(full.schema, parent_keys)
-        rank_keys = Keys.make_keys(input.schema, rank_keys)
-        name_keys = Keys.make_keys(input.schema, name_keys)
+    def create(cls, id: str, input: Port, full: Port, taxon_keys, ancestor_keys, **kwargs):
+        taxon_keys = Keys.make_keys(input.schema, taxon_keys)
+        ancestor_keys = Keys.make_keys(full.schema, ancestor_keys)
         os = input.schema.fields.copy()
         os.update({ key.name: key for key in link_keys.keys })
         schema = Port.schema_from_dict(os, ordered=True)()
@@ -121,4 +110,3 @@ class ParentTransform(Transform):
         linked_data = record.data.copy()
         linked_data.update(self.input_keys.make_key_map(parent, self.link_keys))
         return Record(record.line, linked_data, record.issues)
-

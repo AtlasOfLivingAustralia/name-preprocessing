@@ -96,6 +96,8 @@ place of `valid_names.csv` is determined by the context.
 While the nodes are being executed, the data associated with the
 `names.output` and `valid_names.output` ports are also stored in the context.
 It is possible to run the same processing chain with multiple different contexts.
+If you wish to dump the contents of the processing to the work file, set the **dump** flag in
+the context.
 
 Processing data can, therefore, be done by presenting a ProcessingContext
 to a collection of linked nodes and running the nodes in order.
@@ -182,9 +184,9 @@ All nodes contain the following common arguments:
 * **counts**=Dict[str, int] An initial dictionary of statistics.
   Empty by default.
 * **break_begin**=bool If set to true, it will run a line of code in the [Node#begin](processing/node.py) 
-  that you can place a breakpoint at and geta  per-node break befoire the node is executed.
+  that you can place a breakpoint at and geta  per-node break before the node is executed.
   False by default.
-* **break_begin**=bool If set to true, it will run a line of code in the [Node#commit](processing/node.py) 
+* **break_commit**=bool If set to true, it will run a line of code in the [Node#commit](processing/node.py) 
   that you can place a breakpoint at and geta  per-node break after the node has been executed.
 
 ## Sources
@@ -248,7 +250,7 @@ Writes data to a CSV file.
   By default, these are derived from the schema.
 * **fieldkeys**=List[str] The column names to use as headers.
   By default, these are derived from the schema.
-* **reduce**=bool If true, the dataset is examined to see which columns arfe all empty
+* **reduce**=bool If true, the dataset is examined to see which columns are all empty
   and can be left ou. False by default.
   
 ### [LogSink](processing/sink.py)
@@ -517,6 +519,68 @@ An additional mapping dataset provides a lookup table of old to new identifier.
 * **accepted_keys** The keys that provide the accepted taxon identifier in the input dataset (eg. 'acceptedNameUsageID')
 * **identifier**:Callable A Record -> str function that takes a record and returns a new identifier for the record
   (eg. `lambda r: r.taxonConceptID + "-" + r.taxonRank)`
+
+### [DwcIdentifierGenerator](dwc/transform.py)
+
+Take an input and generate additional identifiers for the taxon from the input.
+The identifiers that are created conform to the 
+[GBIF Identifier](https://tools.gbif.org/dwca-validator/extension.do?id=gbif:Identifier) extension.
+An additional status field allows identifier status such as 'variant', 'replaced' etc.
+
+`dwc.transform.DwcIdentifierGenerator.create(id, input, taxon_keys, identfiier_keys, translator...)`
+
+* **input** The source of identifiers
+* **taxon_keys** The keys that provide the unique identifier for the taxon
+* **identifier_keys** The keys that provide the base identifier to five to the translators
+* **translators** One or more translators that take the record from the source and use it to generate 
+  additional identifiers.
+
+The translation is iterative.
+Newly created identifiers are fed back into the translators until no new identifiers
+are created.
+
+#### [DwcIdentifierTranslator](dwc/transform.py)
+
+A translator that will take a record and identifier and create a new identifier
+record based on the supplied data.
+
+`dwc.transform.create(identifier, status, datasetID, title, subject, format, source, provenance)`
+
+Each argument can be either:
+
+* `None`, in which case the field is left empty
+* A string, in which case the field is set to the string value
+* A function or lambda that takes three arguments: the processing context, the source record and the current identifier
+  and returns a value based on the arguments.
+
+* **identifier** The identifier transform (required)
+* **status** The status trabnsform, defaults to `'variant'`
+* **datesetID** The source datasetID, defaults to the datasetID of the record
+* **title** The identifier title, defaults to `None`
+* **subject** The identifier subject. defaults to `None`
+* **format** The identifier format (the type of thing resolving the identifier will return)
+* **source** The source of the identifier
+* **provenance** How the identifier was created
+
+### [DwcAncestorIdentifierGenerator](dwc/transform.py)
+
+Take an input and generate additional identifiers for the taxon based on
+a supplied historical trail of previous identifiers.
+Otherwise, the generator acts in a similar manner to an [identifier generator](#dwcidentifiergenerator)
+with the taxon key also being the identifier key.
+
+`dwc.transform.DwcAncestorIdentifierGenerator.create(id, input, full, taxon_keys, ancestor_keys, translator...)`
+
+* **input** The source of identifiers
+* **full** The full dataset containing the historical trail
+* **taxon_keys** The keys that provide the unique identifier for the taxon
+* **ancestor_keys** The keys that provide the unique identifier of the next ancestor
+* **identifier_keys** The keys that provide the base identifier to five to the translators
+* **translators** One or more translators that take the record from the source and use it to generate 
+  additional identifiers.
+
+The generator will follow the trail of ancesotr keys until no further
+ancestors are found.
 
 ## Predicates
 

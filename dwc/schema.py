@@ -55,12 +55,15 @@ class TaxonSchema(Schema):
     taxonRemarks = fields.String(missing=None)
     provenance = fields.String(missing=None, uri='http://purl.org/dc/terms/provenance')
     source = fields.String(missing=None, uri='http://purl.org/dc/terms/source')
+    taxonomicFlags = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/taxonomicFlags')
 
     class Meta:
         ordered = True
         uri = 'Taxon'
         namespace = 'http://rs.tdwg.org/dwc/terms/'
 
+class ExtendedTaxonSchema(TaxonSchema):
+    vernacularName = fields.String(missing=None)
 
 class VernacularSchema(Schema):
     taxonID = fields.String(metadata={ 'export': True })
@@ -126,6 +129,25 @@ class VernacularNameSchema(Schema):
         uri = 'http://rs.gbif.org/terms/1.0/VernacularName'
         namespace = 'http://rs.tdwg.org/dwc/terms/'
 
+class IdentifierSchema(Schema):
+    """
+    Schema for additional identifiers
+    """
+    taxonID = fields.String(required=True, metadata={ 'export': True })
+    identifier = fields.String(required=True, uri="http://purl.org/dc/terms/identifier")
+    datasetID = fields.String(missing=None)
+    title = fields.String(missing=None, uri='http://purl.org/dc/terms/title')
+    status = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/status')
+    format = fields.String(missing=None, uri='http://purl.org/dc/terms/format')
+    source = fields.String(missing=None, uri='http://purl.org/dc/terms/source')
+    taxonRemarks = fields.String(missing=None)
+    provenance = fields.String(missing=None, uri='http://purl.org/dc/terms/provenance')
+
+    class Meta:
+        ordered = True
+        uri = 'http://rs.gbif.org/terms/1.0/Identifier'
+        namespace = 'http://rs.tdwg.org/dwc/terms/'
+
 class MappingSchema(Schema):
     term = fields.String()
     mapping = fields.String(missing=None)
@@ -140,3 +162,4 @@ class TaxonomicStatusMapSchema(Schema):
 class NomenclaturalCodeMapSchema(Schema):
     kingdom = fields.String()
     nomenclaturalCode = fields.String()
+    taxonomicFlags = fields.String()

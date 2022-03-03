@@ -18,7 +18,7 @@ import marshmallow
 import requests
 
 from ala.schema import CollectorySchema
-from dwc.schema import TaxonSchema, VernacularSchema, VernacularNameSchema
+from dwc.schema import VernacularNameSchema, ExtendedTaxonSchema
 from processing.dataset import Port, Dataset, Record
 from processing.node import ProcessingContext
 from processing.source import Source, CsvSource
@@ -30,7 +30,7 @@ class SpeciesListSource(Source):
 
     @classmethod
     def create(cls, id:str, service="https://lists.ala.org.au/ws"):
-        schema = TaxonSchema()
+        schema = ExtendedTaxonSchema()
         output = Port.port(schema)
         error = Port.error_port(schema)
         return SpeciesListSource(id, output, error, service)
@@ -38,15 +38,17 @@ class SpeciesListSource(Source):
     def execute(self, context: ProcessingContext):
         output = Dataset.for_port(self.output)
         errors = Dataset.for_port(self.error)
-        fieldmap = { (field.data_key if field.data_key is not None else field.name): field.name for field in self.output.schema.fields.values()}
+        fieldmap = { (field.data_key if field.data_key is not None else field.name).lower(): field.name for field in self.output.schema.fields.values()}
         dr = context.get_default('datasetID')
         list = requests.get(self.service + "/speciesListItems/" + dr, params={'includeKVP': True}).json()
         line = 0
         for item in list:
             data = dict()
             for kv in item.get('kvpValues', []):
-                key = kv.get('key', None)
+                key: str = kv.get('key', None)
                 value = kv.get('value', None)
+                if key is not None:
+                    key = key.lower().replace(' ', '')
                 if key is not None and value is not None and key in fieldmap:
                     data[fieldmap[key]] = value
             data['taxonID'] = 'ALA_' + str(item['id'])
@@ -104,12 +106,13 @@ class VernacularListSource(Source):
             data['datasetID'] = item['dataResourceUid']
             record = Record(line, data, None)
             if data['vernacularName'] is None:
-                errors.add(Record.error(record, None, "No scientific name"))
+                errors.add(Record.error(record, None, "No vernacular name"))
                 self.count(self.ERROR_COUNT, record, context)
             else:
                 output.add(record)
                 self.count(self.ACCEPTED_COUNT, record, context)
             self.count(self.PROCESSED_COUNT, record, context)
+            line = line + 1
         context.save(self.output, output)
         context.save(self.error, errors)
 

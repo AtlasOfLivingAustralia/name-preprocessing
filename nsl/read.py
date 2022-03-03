@@ -14,6 +14,7 @@
 from ala.transform import PublisherSource, CollectorySource
 from dwc.meta import MetaFile, EmlFile
 from dwc.schema import NomenclaturalCodeMapSchema
+from dwc.transform import DwcIdentifierGenerator, DwcIdentifierTranslator
 from nsl.schema import TaxonSchema, NameSchema, CommonNameSchema, RankMapSchema, TaxonomicStatusMapSchema
 from nsl.todwc import VernacularToDwcTransform, NslToDwcTaxonTransform, NslAdditionalToDwcTransform
 from processing.dataset import Record, IndexType
@@ -76,7 +77,7 @@ def reader() -> Orchestrator:
     rank_source = CsvSource.create("rank_source", rank_map_file, "ala", rank_map_schema)
     taxon_rank_lookup = LookupTransform.create("taxon_rank_lookup", scientific_taxon.output, rank_source.output, 'taxonRank', 'term', reject=True, record_unmatched=True, lookup_map={'taxonRank': 'mappedTaxonRank', 'taxonRankLevel': 'taxonRankLevel' })
     nomenclatural_code_map = CsvSource.create("nomenclatural_code_map", nomenclatural_code_map_file, "ala", nomenclatural_code_schema)
-    taxon_coded = LookupTransform.create('taxon_coded', taxon_rank_lookup.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', record_unmatched=True, lookup_map={'nomenclaturalCode': 'kingdom_nomenclaturalCode'})
+    taxon_coded = LookupTransform.create('taxon_coded', taxon_rank_lookup.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', record_unmatched=True, lookup_map={'nomenclaturalCode': 'kingdom_nomenclaturalCode', 'taxonomicFlags': 'taxonomicFlags'})
     status_source = CsvSource.create("status_source", taxonomic_status_map_file, "ala", taxonomic_status_schema)
     taxon_status_lookup = LookupTransform.create("taxon_status_lookup", taxon_coded.output, status_source.output, 'taxonomicStatus', 'Term', reject=True, record_unmatched=True, lookup_map={'DwC': 'mappedTaxonomicStatus'}, lookup_include=['Accepted', 'Synonym', 'Misapplied', 'Unplaced', 'Excluded'])
     accepted_taxon = FilterTransform.create('accepted_taxon', taxon_status_lookup.output, is_accepted_taxon)
@@ -109,7 +110,13 @@ def reader() -> Orchestrator:
     vernacular_dwc = VernacularToDwcTransform.create('vernacular_dwc', vernacular_source.output, taxon_dwc.output, 'scientificNameID', 'scientific_name_id')
     vernacular_dwc_output = CsvSink.create("vernacular_dwc_output", vernacular_dwc.output, "vernacularName.csv", "excel")
 
-    dwc_meta = MetaFile.create('dwc_meta', taxon_dwc_output, vernacular_dwc_output)
+    dwc_identifier = DwcIdentifierGenerator.create('dwc_identifier', taxon_dwc.output, 'taxonID', 'taxonID',
+        DwcIdentifierTranslator.regex('^https://', 'http://', title = 'Taxon', status = 'variant'),
+        fail_on_exception = True
+    )
+    dwc_identifier_output = CsvSink.create("dwc_identifier_output", dwc_identifier.output, "identifier.csv", "excel",reduce=True)
+
+    dwc_meta = MetaFile.create('dwc_meta', taxon_dwc_output, vernacular_dwc_output, dwc_identifier_output)
     publisher = PublisherSource.create('publisher')
     metadata = CollectorySource.create('metadata')
     dwc_eml = EmlFile.create('dwc_eml', metadata.output, publisher.output)
@@ -153,6 +160,8 @@ def reader() -> Orchestrator:
                                     vernacular_source,
                                     vernacular_dwc,
                                     vernacular_dwc_output,
+                                    dwc_identifier,
+                                    dwc_identifier_output,
                                     dwc_meta,
                                     metadata,
                                     publisher,

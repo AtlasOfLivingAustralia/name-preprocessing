@@ -10,16 +10,16 @@
 #   WITHOUT WARRANTY OF ANY KIND, either express or
 #   implied. See the License for the specific language governing
 #   rights and limitations under the License.
-
+import re
 import uuid
-from typing import Callable, Dict
+from typing import Callable, Dict, List, Tuple
 
 import attr
 
-from dwc.schema import MappingSchema
+from dwc.schema import MappingSchema, IdentifierSchema
 from processing.dataset import Port, Keys, Index, Dataset, Record, IndexType
 from processing.node import ProcessingContext
-from processing.transform import ThroughTransform
+from processing.transform import ThroughTransform, Transform
 
 
 @attr.s
@@ -269,3 +269,304 @@ class DwcTaxonReidentify(ThroughTransform):
         context.save(self.output, result)
         context.save(self.mapping, mapping)
         context.save(self.error, errors)
+
+
+@attr.s
+class DwcTaxonParent(ThroughTransform):
+    """
+    Fill out parent classification information - genus, family, order, class, phylum, kingdom if not present.
+    """
+    identifier_keys: Keys = attr.ib()
+    parent_keys: Keys = attr.ib()
+    accepted_keys: Keys = attr.ib()
+    name_keys: Keys = attr.ib()
+    rank_keys = attr.ib()
+
+    @classmethod
+    def create(cls, id: str,  input: Port, identifier_keys, parent_keys, accepted_keys, name_keys, rank_keys, **kwargs):
+        output = Port.port(input.schema)
+        identifier_keys = Keys.make_keys(input.schema, identifier_keys)
+        parent_keys = Keys.make_keys(input.schema, parent_keys)
+        accepted_keys = Keys.make_keys(input.schema, accepted_keys)
+        name_keys = Keys.make_keys(input.schema, name_keys)
+        rank_keys = Keys.make_keys(input.schema, rank_keys)
+        return DwcTaxonParent(id, input, output, None, identifier_keys, parent_keys, accepted_keys, name_keys, rank_keys, **kwargs)
+
+    def execute(self, context: ProcessingContext):
+        data = context.acquire(self.input)
+        index = Index.create(data, self.identifier_keys, IndexType.FIRST)
+        result = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        map_lookup = dict() # Use a lookup table because the identifier function may be stateful
+        map_replace = dict()
+        line = 0
+        for record in data.rows:
+            try:
+                composed = Record.copy(record)
+                while record is not None:
+                    accepted = index.find(record, self.accepted_keys)
+                    if accepted is not None:
+                        record = accepted
+                    rank = self.rank_keys.get(record)
+                    name = self.name_keys.get(record)
+                    if rank == 'kingdom' and composed.kingdom is None:
+                        composed.data['kingdom'] = name
+                    elif rank == 'phylum' and composed.phylum is None:
+                        composed.data['phylum'] = name
+                    elif rank == 'subphylum' and composed.subphylum is None:
+                        composed.data['subphylum'] = name
+                    elif rank == 'class' and composed.class_ is None:
+                        composed.data['class_'] = name
+                    elif rank == 'subclass' and composed.subclass is None:
+                        composed.data['subclass'] = name
+                    elif rank == 'order' and composed.order is None:
+                        composed.data['order'] = name
+                    elif rank == 'suborder' and composed.suborder is None:
+                        composed.data['suborder'] = name
+                    elif rank == 'infraorder' and composed.infraorder is None:
+                        composed.data['infraorder'] = name
+                    elif rank == 'family' and composed.family is None:
+                        composed.data['family'] = name
+                    elif rank == 'family' and composed.family is None:
+                        composed.data['family'] = name
+                    record = index.find(record, self.parent_keys)
+                result.add(composed)
+                self.count(self.ACCEPTED_COUNT, record, context)
+            except Exception as err:
+                self.handle_exception(err, record, errors, context)
+            line += 1
+            self.count(self.PROCESSED_COUNT, record, context)
+        context.save(self.output, result)
+        context.save(self.error, errors)
+
+def _default_dataset_id():
+    return lambda context, record, identifier:  context.get_default('datasetID')
+
+@attr.s
+class DwcIdentifierTranslator:
+    identifier: Callable = attr.ib()
+    status: Callable = attr.ib()
+    datasetID: Callable = attr.ib()
+    title: Callable = attr.ib()
+    subject: Callable = attr.ib()
+    format: Callable = attr.ib()
+    source: Callable = attr.ib()
+    provenance: Callable = attr.ib()
+
+    @classmethod
+    def _build_callable(cls, accessor) -> Callable:
+        if accessor is None:
+            return lambda context, record, identifier: None
+        if isinstance(accessor, Callable):
+            return accessor
+        if isinstance(accessor, str):
+            return lambda context, record, identifier: accessor
+        raise ValueError("Unable to build callable for " + accessor)
+
+    @classmethod
+    def create(cls, identifier, status = 'variant', datasetID = _default_dataset_id(), title = None, subject = None, format = None, source = None, provenance = None):
+        """
+        Create a translator based on regular expressions.
+        Translation of other features depend on a generator
+
+        :param identifier: The identifier to build
+        :param status: The status generator (defaults to 'alternative')
+        :param datasetID: The datasetID generator (defaults to the same as the source datasetID)
+        :param title: The title generator (defaults to none)
+        :param subject: The subject generator (defaults to none)
+        :param format: The format generator (defaults to none)
+        :param source: The source generator (defaults to none)
+        :param provenance: The provenance generator (defaults to none)
+        :return: A regular expression replacer
+        """
+        identifier = DwcIdentifierTranslator._build_callable(identifier)
+        status = DwcIdentifierTranslator._build_callable(status)
+        datasetID = DwcIdentifierTranslator._build_callable(datasetID)
+        title = DwcIdentifierTranslator._build_callable(title)
+        subject = DwcIdentifierTranslator._build_callable(subject)
+        format = DwcIdentifierTranslator._build_callable(format)
+        source = DwcIdentifierTranslator._build_callable(source)
+        provenance = DwcIdentifierTranslator._build_callable(provenance)
+        return DwcIdentifierTranslator(identifier, status, datasetID, title, subject, format, source, provenance)
+
+    @classmethod
+    def regex(cls, pattern: str, replace: str, status = 'alternative', datasetID = _default_dataset_id(), title = None, subject = None, format = None, source = None, provenance = None):
+        """
+        Create a translator based on regular expressions.
+        Translation of other features depend on a generator
+
+        :param pattern: The pattern to match
+        :param replace: The pattern to replace the match with
+        :param status: The status generator (defaults to 'alternative')
+        :param datasetID: The datasetID generator (defaults to the same as the source datasetID)
+        :param title: The title generator (defaults to none)
+        :param subject: The subject generator (defaults to none)
+        :param format: The format generator (defaults to none)
+        :param source: The source generator (defaults to none)
+        :param provenance: The provenance generator (defaults to none)
+        :return: A regular expression replacer
+        """
+        pattern = re.compile(pattern)
+        identifier = lambda context, record, identifier: pattern.sub(replace, identifier)
+        return DwcIdentifierTranslator.create(identifier, status, datasetID, title, subject, format, source, provenance)
+
+    def translate(self, context, record, key, identifier) -> Tuple[Record, str]:
+        id = self.identifier(context, record, identifier)
+        if id is None:
+            return (None, None)
+        data = {}
+        data['taxonID'] = str(key)
+        data['identifier'] = id
+        data['status'] = self.status(context, record, id)
+        data['datasetID'] = self.datasetID(context, record, id)
+        data['title'] = self.title(context, record, id)
+        data['subject'] = self.subject(context, record, id)
+        data['format'] = self.format(context, record, id)
+        data['source'] = self.source(context, record, id)
+        data['provenance'] = self.provenance(context, record, id)
+        return (Record(record.line, data, record.issues), id)
+
+@attr.s
+class DwcIdentifierGenerator(Transform):
+    CREATED = "created"
+    """Build a set of new  """
+    input: Port = attr.ib()
+    output: Port = attr.ib()
+    taxon_keys: Keys = attr.ib()
+    identifier_keys: Keys = attr.ib()
+    translators: List[DwcIdentifierTranslator] = attr.ib()
+    keep_all: bool = attr.ib(kw_only=True, default=False)
+
+    @classmethod
+    def create(cls, id: str,  input: Port, taxon_keys, identifier_keys, *args, **kwargs):
+        output = Port.port(IdentifierSchema())
+        taxon_keys = Keys.make_keys(input.schema, taxon_keys)
+        identifier_keys = Keys.make_keys(input.schema, identifier_keys)
+        translators = list(args)
+        return DwcIdentifierGenerator(id, input, output, taxon_keys, identifier_keys, translators, **kwargs)
+
+    def inputs(self) -> Dict[str, Port]:
+        inputs = super().inputs()
+        inputs['input'] = self.input
+        return inputs
+
+    def outputs(self) -> Dict[str, Port]:
+        outputs = super().outputs()
+        outputs['output'] = self.output
+        return outputs
+
+    def execute(self, context: ProcessingContext):
+        super().execute(context)
+        data = context.acquire(self.input)
+        result = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        for row in data.rows:
+            try:
+                seen = set()
+                working = set()
+                key = self.taxon_keys.get(row)
+                working.add(key)
+                while len(working) > 0:
+                    changes = set()
+                    for id in working:
+                        for translator in self.translators:
+                            (additional, identifier) = translator.translate(context, row, key, id)
+                            if additional is not None and identifier not in seen and (self.keep_all or identifier != id):
+                                self.count(self.CREATED, additional, context)
+                                result.add(additional)
+                                seen.add(identifier)
+                                changes.add(identifier)
+                    working = changes
+            except Exception as err:
+                if self.fail_on_exception:
+                    raise err
+                errors.add(Record.error(row, err))
+                self.count(self.ERROR_COUNT, row, context)
+            self.count(self.PROCESSED_COUNT, row, context)
+        context.save(self.output, result)
+        context.save(self.error, errors)
+
+@attr.s
+class DwcAncestorIdentifierGenerator(Transform):
+    """
+    Build a list of ancestor identifiers for a taxon.
+    This can be used if the source dataset provides a trail of elements.
+    """
+    input: Port = attr.ib()
+    full: Port = attr.ib()
+    output: Port = attr.ib()
+    taxon_keys: Keys = attr.ib()
+    ancestor_keys: Keys = attr.ib()
+    translator: DwcIdentifierTranslator = attr.ib()
+
+    @classmethod
+    def create(cls, id: str, input: Port, full: Port, taxon_keys, ancestor_keys, translator: DwcIdentifierTranslator, **kwargs):
+        taxon_keys = Keys.make_keys(input.schema, taxon_keys)
+        ancestor_keys = Keys.make_keys(full.schema, ancestor_keys)
+        output = Port.port(IdentifierSchema())
+        return DwcAncestorIdentifierGenerator(id, input, full, output, taxon_keys, ancestor_keys, translator, **kwargs)
+
+    def inputs(self) -> Dict[str, Port]:
+        inputs = super().inputs()
+        inputs['input'] = self.input
+        inputs['full'] = self.full
+        return inputs
+
+    def outputs(self) -> Dict[str, Port]:
+        outputs = super().outputs()
+        outputs['output'] = self.output
+        return outputs
+
+    def execute(self, context: ProcessingContext):
+        super().execute(context)
+        data = context.acquire(self.input)
+        table = context.acquire(self.full)
+        index = Index.create(table, self.taxon_keys)
+        result = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        additional = self.build_additional(context)
+        for record in data.rows:
+            try:
+                ancestor = record
+                trail = set()
+                while True:
+                    kv = self.ancestor_keys.get(ancestor)
+                    if kv is None:
+                        break
+                    if kv in trail:
+                        self.logger.warning("Circular trail at %s in %s", kv, trail)
+                        errors.add(Record.error(record, None, "Circular history reference at " + str(kv)))
+                        self.count(self.ERROR_COUNT, record, context)
+                        break
+                    trail.add(kv)
+                    ancestor = index.find(ancestor, self.ancestor_keys)
+                    if ancestor is None:
+                         break
+                    composed = self.compose(record, ancestor, context, additional)
+                    if composed is not None:
+                        result.add(composed)
+                    self.count(self.ACCEPTED_COUNT, composed, context)
+            except Exception as err:
+                if self.fail_on_exception:
+                    raise err
+                errors.add(Record.error(record, err))
+                self.count(self.ERROR_COUNT, record, context)
+            self.count(self.PROCESSED_COUNT, record, context)
+        context.save(self.output, result)
+        context.save(self.error, errors)
+
+    def compose(self, record: Record, ancestor: Record, context: ProcessingContext, additional) -> Record:
+        """
+        Make an updated version of the record with the accepted parent
+
+        :param record: The original record
+        :param parent: The parent record (null for none)
+        :param context: The processing context
+        :param additional: Any additional context
+
+        :return: A composed record, or null for no record
+        """
+        parent_id = self.taxon_keys.get(record)
+        id = self.taxon_keys.get(ancestor)
+        (composed, _id) = self.translator.translate(context, ancestor, parent_id, id)
+        return composed

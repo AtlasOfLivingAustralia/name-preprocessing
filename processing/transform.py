@@ -13,6 +13,8 @@
 
 import datetime
 import re
+import string
+import uuid
 from collections import OrderedDict
 from collections.abc import Callable
 from copy import deepcopy
@@ -252,20 +254,21 @@ class ProjectTransform(ThroughTransform):
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
-        source = self.input.field_set()
-        dest = self.output.field_set()
+        source = set(self.input.field_set())
+        dest = set(self.output.field_set())
         self.copy_attrs = dest.intersection(source)
         self.append_attrs = dest.difference(source)
 
     @classmethod
     def create(cls, id: str, input: Port, output: Schema, **kwargs):
-        output_port = Port.of(output)
+        output_port = Port.port(output)
         return ProjectTransform(id, input, output_port, None, **kwargs)
 
     def compose(self, record: Record, context: ProcessingContext, additional) -> Record:
         projected = dict()
         for cp in self.copy_attrs:
-            projected[cp] = record.data[cp]
+            if cp in record.data:
+                projected[cp] = record.data[cp]
         for ap in self.append_attrs:
             projected[ap] = None
         return Record(record.line, projected, record.issues)
@@ -529,6 +532,15 @@ class MapTransform(ThroughTransform):
         return lambda: value
 
     @classmethod
+    def capwords(cls, key):
+        """
+        Return a capitalised version of a word
+        :param key: The record key
+        :return: The capitalised version of that record
+        """
+        return lambda r: string.capwords(r.data[key]) if r.data[key] else None
+
+    @classmethod
     def default(cls, key):
         """
         Mapping that returns a default lookup on a context
@@ -628,6 +640,11 @@ class MapTransform(ThroughTransform):
             except ValueError:
                 pass
         return None
+
+    @classmethod
+    def uuid(cls):
+        """Generate a new UUID"""
+        return lambda r: str(uuid.uuid4())
 
     @classmethod
     def _getter(cls, name):

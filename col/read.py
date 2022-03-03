@@ -17,9 +17,9 @@ import attr
 
 from ala.transform import PublisherSource, CollectorySource
 from col.schema import ColTaxonSchema, ColDistributionSchema, ColVernacularSchema, ColAcceptedKingdomSchema, \
-    ColAcceptedDatasetSchema, ColAcceptedLocationSchema, ColAcceptedLanguageSchema, ColNomenclaturalCodeMapSchema
+    ColAcceptedDatasetSchema, ColAcceptedLocationSchema, ColAcceptedLanguageSchema
 from dwc.meta import MetaFile, EmlFile
-from dwc.schema import TaxonSchema, VernacularSchema, TaxonomicStatusMapSchema
+from dwc.schema import TaxonSchema, VernacularSchema, TaxonomicStatusMapSchema, NomenclaturalCodeMapSchema
 from dwc.transform import DwcTaxonValidate, DwcTaxonTrail, DwcTaxonReidentify
 from processing.dataset import Port, Index, Keys, Record, IndexType
 from processing.node import ProcessingContext
@@ -140,7 +140,7 @@ def reader() -> Orchestrator:
     col_accepted_location_schema = ColAcceptedLocationSchema()
     col_accepted_language_schema = ColAcceptedLanguageSchema()
     col_taxonomic_status_map_schema = TaxonomicStatusMapSchema()
-    col_nomenclatural_code_map_schema = ColNomenclaturalCodeMapSchema()
+    col_nomenclatural_code_map_schema = NomenclaturalCodeMapSchema()
 
     # Only use those taxa from a list of accepted kingdoms and, for some kingdoms, specific locations and datasets
     accepted_kingdoms = CsvSource.create("accepted_kingdoms", kingdom_file, "ala", col_accepted_kingdom_schema)

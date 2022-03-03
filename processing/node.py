@@ -123,6 +123,13 @@ class Node:
         """
         self.report(context)
         self.logger.debug("Committing %s", self.id)
+        if context.dump:
+            from processing.sink import CsvSink
+            for (oid, output) in self.outputs().items():
+                did = self.id + "_" + oid
+                self.logger.info("Dumping %s", did);
+                dump = CsvSink.create(did, output, did + '.csv', 'excel', work=True, reduce=False)
+                dump.execute(context)
         if context.parent is not None:
             context.parent.merge(context)
         if self.break_commit:
@@ -242,7 +249,7 @@ class ProcessingContext(Node):
     clear_work_dir: bool = attr.ib(default=True, kw_only=True)
     fail_on_error: bool = attr.ib(default=True)
     sub_context_count: int = attr.ib(default=0, kw_only=True)
-
+    dump: bool = attr.ib(default=False, kw_only=True)
 
     @handler.default
     def _default_handler(self):
@@ -283,6 +290,7 @@ class ProcessingContext(Node):
         input_dir = kwargs.pop('input_dir', parent.input_dir)
         output_dir = kwargs.pop('output_dir', parent.output_dir)
         clear_work_dir = kwargs.pop('clear_work_dir', parent.clear_work_dir)
+        dump = kwargs.pop('dump', parent.dump)
         return cls.create(
             parent.subid(),
             parent=parent,
@@ -294,6 +302,7 @@ class ProcessingContext(Node):
             input_dir=input_dir,
             output_dir=output_dir,
             clear_work_dir=clear_work_dir,
+            dump=dump,
             **kwargs
         )
 

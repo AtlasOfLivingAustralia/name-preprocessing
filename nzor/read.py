@@ -67,7 +67,7 @@ def reader() -> Orchestrator:
     language_map = CsvSource.create("language_map", language_file, "ala", nzor_language_map_schema)
     nomenclatural_code_map = CsvSource.create("nomenclatual_code_map", nomenclatural_code_file, "ala", nomenclatural_code_schema)
     taxon_source = CsvSource.create("taxon_source", taxon_file, 'excel-tab', nzor_taxon_schema, no_errors=False)
-    taxon_coded = LookupTransform.create("taxon_coded", taxon_source.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', lookup_map= { 'nomenclaturalCode': 'kingdomNomenclaturalCode' })
+    taxon_coded = LookupTransform.create("taxon_coded", taxon_source.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', lookup_map={ 'nomenclaturalCode': 'kingdomNomenclaturalCode', 'taxonomicFlags': 'taxonomicFlags' })
     taxon_recoded = MapTransform.create("taxon_recoded", taxon_coded.output, nzor_taxon_schema, {
        'nomenclaturalCode': (lambda r: choose(r.kingdomNomenclaturalCode, r.nomenclaturalCode))
     }, auto=True)
@@ -94,6 +94,7 @@ def reader() -> Orchestrator:
     vernacular_mapped = LookupTransform.create('vernacular_mapped', vernacular_source.output, language_map.output, 'language', 'Name')
     vernacular_linked = LookupTransform.create('vernacular_linked', vernacular_mapped.output, taxon_rewrite.output, 'id', 'taxonID', lookup_include=['scientificNameID'], reject=True)
     vernacular_rewrite = MapTransform.create('vernacular_rewrite', vernacular_linked.output, VernacularSchema(), {
+       'vernacularName': MapTransform.capwords('vernacularName'),
        'datasetID': MapTransform.default('datasetID'),
        'taxonID': 'id',
        'nameID': (lambda r: 'NZOR_V_' + str(r.line)),

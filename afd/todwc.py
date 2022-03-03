@@ -13,6 +13,7 @@
 
 import attr
 import dwc.schema
+import string
 from processing.dataset import Port, Dataset, Keys, Record, Index
 from processing.node import ProcessingContext, ProcessingException
 from processing.transform import ThroughTransform
@@ -299,7 +300,7 @@ class VernacularToDwcTransform(ThroughTransform):
             'taxonID': taxonID,
             'nameID': record.NAME_GUID_ID,
             'datasetID': context.get_default('datasetID'),
-            'vernacularName': vernacularName,
+            'vernacularName': string.capwords(vernacularName),
             'status': record.nomenclaturalStatus if record.nomenclaturalStatus else 'common',
             'language': context.get_default('language'),
             'temporal': None,

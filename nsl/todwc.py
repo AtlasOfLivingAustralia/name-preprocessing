@@ -13,6 +13,7 @@
 
 import importlib
 import re
+import string
 from typing import Dict
 
 import attr
@@ -163,9 +164,10 @@ class NslToDwcTaxonTransform(ThroughTransform):
             'nameFormatted': nameFormatted,
             'taxonRemarks': strip_markup(record.taxonRemarks),
             'provenance': None,
-            'source': taxonID
+            'source': taxonID,
+            'taxonomicFlags': record.taxonomicFlags
         }
-        if dwc['nomenclaturalCode'] != record.nomenclaturalCode:
+        if dwc['nomenclaturalCode'] != record.nomenclaturalCode and dwc['taxonomicFlags'] != 'fuzzyCode':
             self.logger.warn("Mismatch in nomenclatural code for " + taxonID + " record contains " + record.nomenclaturalCode + " output is " + dwc['nomenclaturalCode'] + " for kingdom " + dwc['kingdom'])
         errors = self.output.schema.validate(dwc)
         if errors:
@@ -320,7 +322,7 @@ class VernacularToDwcTransform(ThroughTransform):
             'taxonID': taxonID,
             'nameID': _fix_url(record.common_name_id),
             'datasetID': context.get_default('datasetID'),
-            'vernacularName': record.common_name,
+            'vernacularName': string.capwords(record.common_name),
             'status': self.status,
             'language': context.get_default('language'),
             'countryCode': context.get_default('countryCode'),

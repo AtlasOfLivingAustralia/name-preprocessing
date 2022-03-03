@@ -103,7 +103,3 @@ class ColAcceptedLocationSchema(Schema):
 class ColAcceptedLanguageSchema(Schema):
     language = fields.String()
     code = fields.String()
-
-class ColNomenclaturalCodeMapSchema(Schema):
-    kingdom = fields.String()
-    nomenclaturalCode = fields.String()

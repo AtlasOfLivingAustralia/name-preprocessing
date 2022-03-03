@@ -10,6 +10,7 @@
 #   WITHOUT WARRANTY OF ANY KIND, either express or
 #   implied. See the License for the specific language governing
 #   rights and limitations under the License.
+import string
 
 import attr
 
@@ -166,7 +167,7 @@ class CaabToDwcVernacularTransform(ThroughTransform):
             'taxonID': taxonID,
             'nameID': nameID,
             'datasetID': context.get_default('datasetID'),
-            'vernacularName': vernacularName,
+            'vernacularName': string.capwords(vernacularName),
             'status': self.status,
             'language': context.get_default('language'),
             'countryCode': context.get_default('countryCode'),

@@ -53,6 +53,7 @@ parser.add_argument('-w', '--work', type=str, help='Work directory (if relative,
 parser.add_argument('-c', '--config', type=str, help='Configuration directory (if relative, then relative to the base directory)', default='config')
 parser.add_argument('-s', '--sources', type=str, help='File containing the source list', default='sources.csv')
 parser.add_argument('-v', '--verbose', help='Verbose logging', action='store_true', default=False)
+parser.add_argument('--dump', help='Dump datasets to the ', action='store_true', default=False)
 parser.add_argument('-x', '--clear', help='Clear the work directory before execution', action='store_true', default=False)
 parser.add_argument('--only', type=str, help='Comma separated list of source ids to execute. If absent, all are executed')
 
@@ -66,6 +67,7 @@ output_dir = os.path.join(base_dir, args.output)
 log_level = logging.DEBUG if args.verbose else logging.INFO
 clear = args.clear
 source_file = args.sources
+dump = args.dump
 if args.only is None:
     source_filter = lambda r: True
 else:
@@ -105,5 +107,5 @@ defaults = {
     'locationID': 'AUS'
 }
 
-context = ProcessingContext.create('all', dangling_sink_class=CsvSink, config_dirs=config_dirs, input_dir=input_dir, work_dir=work_dir, output_dir=output_dir, log_level=log_level, clear_work_dir=clear, defaults=defaults)
+context = ProcessingContext.create('all', dangling_sink_class=CsvSink, config_dirs=config_dirs, input_dir=input_dir, work_dir=work_dir, output_dir=output_dir, log_level=log_level, clear_work_dir=clear, defaults=defaults, dump=dump)
 orchestator.run(context)

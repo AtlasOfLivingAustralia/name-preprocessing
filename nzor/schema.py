@@ -60,6 +60,7 @@ class NzorTaxonSchema(Schema):
     datasetID = fields.String(missing=None)
     datasetName = fields.String(missing=None)
     references = fields.String(missing=None)
+    taxonomicFlags = fields.String(missing=None)
 
     class Meta:
         ordered = True
