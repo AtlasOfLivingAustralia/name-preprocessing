@@ -1,0 +1,45 @@
+Term,DwC,Accepted,Synonym,Misapplied,Unplaced,Excluded
+[unknown],unknown,false,true,false,true,false
+[unplaced name?],unplaced,false,true,false,true,false
+[unplaced relationship?],unplaced,false,true,false,true,false
+accepted,accepted,true,false,false,false,false
+ApcConcept,accepted,true,false,false,false,false
+ApcExcluded,excluded,false,false,false,true,true
+autonym,accepted,true,false,false,false,false
+basionym,synonym,false,true,false,false,false
+comb. et stat. nov.,accepted,true,false,false,false,false
+comb. nov.,accepted,true,false,false,false,false
+doubtful misapplied,misapplied,false,false,true,false,false
+doubtful nomenclatural synonym,homotypicSynonym,false,true,false,false,false
+doubtful pro parte misapplied,misapplied,false,false,true,false,false
+doubtful pro parte taxonomic synonym,proParteSynonym,false,true,false,false,false
+doubtful synonym,synonym,false,true,false,false,false
+doubtful taxonomic synonym,heterotypicSynonym,false,true,false,false,false
+excluded name,excluded,false,false,false,true,true
+excluded,excluded,false,false,false,true,true
+invalid publication,misapplied,false,false,true,false,false
+isonym,synonym,false,true,false,false,false
+misapplied,misapplied,false,false,true,false,false
+nom. et stat. nov.,accepted,true,false,false,false,false
+nom. nov.,accepted,true,false,false,false,false
+nomenclatural synonym,homotypicSynonym,false,true,false,false,false
+orthographic variant,synonym,false,true,false,false,false
+primary reference,accepted,true,false,false,false,false
+pro parte misapplied,misapplied,false,false,true,false,false
+pro parte nomenclatural synonym,proParteSynonym,false,true,false,false,false
+pro parte replaced synonym,proParteSynonym,false,true,false,false,false
+pro parte taxonomic synonym,proParteSynonym,false,true,false,false,false
+replaced synonym,synonym,false,true,false,false,false
+secondary reference,accepted,true,false,false,false,false
+sens. lat.,synonym,false,true,false,false,false
+synonym,synonym,false,true,false,false,false
+tax. nov.,accepted,true,false,false,false,false
+taxonomic synonym,heterotypicSynonym,false,true,false,false,false
+trade name,synonym,false,true,false,false,false
+inferredAccepted,inferredAccepted,true,false,false,false,false
+inferredSynonym,inferredSynonym,false,true,false,false,false
+DeclaredBt,synonym,false,true,false,false,false
+alternative name,synonym,false,true,false,false,false
+aunsourced doubtful misapplied,misapplied,false,false,true,false,false
+aunsourced misapplied,misapplied,false,false,true,false,false
+aunsourced pro parte misapplied,misapplied,false,false,true,false,false

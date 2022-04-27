@@ -1,0 +1,15 @@
+<metadata code="CAAB" date="2015-10-14">
+  <title>Codes for Australian Aquatic Biota</title>
+  <organization>
+    <organizationName>Codes for Australian Aquatic Biota</organizationName>
+    <onlineUrl>http://www.marine.csiro.au/caab/</onlineUrl>
+  </organization>
+  <description>Data from Codes for Australian Aquatic Biota (CAAB) transformed into DwCA Taxon format, for loading into the Atlas of Living Australia's name indexes.</description>
+  <geographicCoverage>
+    <geographicDescription>Australia</geographicDescription>
+  </geographicCoverage>
+  <taxonomicCoverage>
+    <generalTaxonomicCoverage>Partial coverage of all kingdoms</generalTaxonomicCoverage>
+  </taxonomicCoverage>
+  <citation>Atlas of Living Australia &amp; Codes for Australian Aquatic Biota </citation>
+</metadata>

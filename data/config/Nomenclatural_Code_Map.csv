@@ -1,0 +1,21 @@
+kingdom,nomenclaturalCode,taxonomicFlags
+Plantae,ICN,
+PLANTAE,ICN,
+Fungi,ICN,
+FUNGI,ICN,
+Fungi Whittaker,ICN,
+Animalia,ICZN,
+ANIMALIA,ICZN,
+Virus,ICVN,
+VIRUS,ICVN,
+Viruses,ICVN,
+Bacteria,ICNB,
+BACTERIA,ICNB,
+Archaea,ICNB,
+ARCHAEA,ICNB,
+Chromista,ICN,ambiguousNomenclaturalCode
+CHROMISTA,ICN,ambiguousNomenclaturalCode
+Protozoa,ICZN,ambiguousNomenclaturalCode
+PROTOZOA,ICZN,ambiguousNomenclaturalCode
+Protista,ICZN,ambiguousNomenclaturalCode
+PROTISTA,ICZN,ambiguousNomenclaturalCode

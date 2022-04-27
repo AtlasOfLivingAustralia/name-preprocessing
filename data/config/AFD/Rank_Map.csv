@@ -1,0 +1,21 @@
+"Key","Rank","Level"
+"taxon.rank.R","Root",0
+"taxon.rank.H","Higher Taxon",1
+"taxon.rank.H.K","Kingdom",2
+"taxon.rank.H.P","Phylum",3
+"taxon.rank.H.C","Class",4
+"taxon.rank.H.O","Order",5
+"taxon.rank.H.D","Division",6
+"taxon.rank.H.CH","Cohort",7
+"taxon.rank.H.SER","Series",8
+"taxon.rank.H.SEC","Section",9
+"taxon.rank.F","Family",10
+"taxon.rank.F.T","Tribe",11
+"taxon.rank.AGG","Aggregate Genera",12
+"taxon.rank.G","Genus",13
+"taxon.rank.SG","Subgenus",14
+"taxon.rank.AGS","Aggregate Species",15
+"taxon.rank.S","Species",16
+"taxon.rank.SS","Subspecies",17
+"taxon.rank.IS","Incertae Sedis",-1
+"taxon.rank.SI","Species Inquirenda",-1

@@ -1,0 +1,7 @@
+kingdom,useDistribution,useDataset
+Archaea,false,false
+Bacteria,false,false
+Chromista,false,false
+Fungi,true,true
+Protozoa,false,false
+Viruses,false,false

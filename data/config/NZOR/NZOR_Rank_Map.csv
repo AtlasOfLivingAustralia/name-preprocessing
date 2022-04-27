@@ -1,0 +1,43 @@
+rank,nomenclaturalCode,taxonRank
+anamorph,,anamorph
+biovar,,biovar
+class,,class
+cv,,cultivar
+Division,ICZN,division zoology
+Division,ICBN,division botany
+f.,,form
+family,,family
+f.sp.,,formaspecialis
+genus,,genus
+infraclass,,infraclass
+infraorder,,infraorder
+kingdom,,kingdom
+nominalInfraFamily,,infrafamily
+none,,unknown
+order,,order
+phylum,,phylum
+pv.,,pathovar
+section,ICZN,section zoology
+section,ICBN,section botany
+serovar,,serovar
+species,,species
+subclass,,subclass
+subfamily,,subfamily
+subforma,,subform
+subgenus,,subgenus
+subinfraclass,,subinfraclass
+subkingdom,,subkingdom
+suborder,,suborder
+subphylum,,subphylum
+subsection,ICZN,subsection zoology
+subsection,ICBN,subsection botany
+subsp,,subspecies
+subsp.,,subspecies
+subtribe,,subtribe
+subvar.,,subvariety
+superclass,,superclass
+superfamily,,superfamily
+superorder,,superorder
+supertribe,,supertribe
+tribe,,tribe
+var.,,variety

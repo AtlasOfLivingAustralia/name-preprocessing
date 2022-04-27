@@ -1,0 +1,27 @@
+Type,Subtype,taxonomicStatus,nomenclaturalStatus,Accepted,Synonym,Misapplied,Vernacular
+name.type.A,,synonym,,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.E,synonym,emendation,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.IN,synonym,invalid name,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.JH,synonym,junior homonym,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.ND,synonym,nomen dubium,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.NNU,synonym,nomen nudum,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.NOB,synonym,nomen oblitum,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.NPR,synonym,nomen protectum,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.O,synonym,original spelling,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.OS,objectiveSynonym,,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.RN,synonym,replacement name,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.SM,synonym,subsequent misspelling,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.SS,subjectiveSynonym,,FALSE,TRUE,FALSE,FALSE
+name.type.A,name.type.A.SY,synonym,,FALSE,TRUE,FALSE,FALSE
+name.type.C,,common,common,FALSE,FALSE,FALSE,TRUE
+name.type.C,name.type.C.N,common,common,FALSE,FALSE,FALSE,TRUE
+name.type.C,name.type.C.O,common,preferred,FALSE,FALSE,FALSE,TRUE
+name.type.E,,excluded,,FALSE,FALSE,TRUE,FALSE
+name.type.E,name.type.E.IQ,excluded,,FALSE,FALSE,TRUE,FALSE
+name.type.E,name.type.E.MI,excluded,,FALSE,FALSE,TRUE,FALSE
+name.type.E,name.type.E.OT,excluded,,FALSE,FALSE,TRUE,FALSE
+name.type.E,name.type.E.VG,excluded,,FALSE,FALSE,TRUE,FALSE
+name.type.L,,legislated,,FALSE,FALSE,FALSE,TRUE
+name.type.NC,,synonym,generic combination,FALSE,TRUE,FALSE,FALSE
+name.type.V,,accepted,,TRUE,FALSE,FALSE,FALSE
+name.type.VS,,miscellaneousLiterature,,FALSE,FALSE,TRUE,FALSE

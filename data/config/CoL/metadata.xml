@@ -1,0 +1,13 @@
+<metadata code="CoL" date="2016-01-15">
+  <title>Catalogue of Life</title>
+  <organization>
+    <organizationName>The Catalogue of Life</organizationName>
+    <onlineUrl>http://www.catalogueoflife.org/</onlineUrl>
+  </organization>
+  <description>Data from the Catalogue of Life. A partial list, containing species not found in other name sources.</description>
+  <description>Data is transformed into DwCA Taxon format, for loading into the Atlas of Living Australia's name indexes.</description>
+  <taxonomicCoverage>
+    <generalTaxonomicCoverage>Covers Bacteria, Protozoa, Chromista, Viruses and Fungi</generalTaxonomicCoverage>
+  </taxonomicCoverage>
+  <citation>Atlas of Living Australia &amp; Catalogue of Life</citation>
+</metadata>

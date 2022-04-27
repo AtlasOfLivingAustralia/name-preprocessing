@@ -1,0 +1,28 @@
+<metadata code="APC" date="2018-10-18">
+  <title>Australian Plant Name Index</title>
+  <organization>
+    <organizationName>The Australian Plant Name Index</organizationName>
+    <onlineUrl>http://www.cpbr.gov.au/apni/index.htm</onlineUrl>
+  </organization>
+  <organization>
+    <organizationName>The Australian Plant Census</organizationName>
+    <onlineUrl>https://www.anbg.gov.au/chah/apc/</onlineUrl>
+  </organization>
+  <description>Data from the Australian Plant Name Index (APNI) and the Australian Plant Census (APC) transformed into DwCA Taxon format, for loading into the Atlas of Living Australia's name indexes.</description>
+  <geographicCoverage>
+    <geographicDescription>Australia</geographicDescription>
+  </geographicCoverage>
+  <taxonomicCoverage>
+    <generalTaxonomicCoverage>Covers Australian Flora</generalTaxonomicCoverage>
+    <taxonomicClassification>
+      <taxonRankName>Kingdom</taxonRankName>
+      <taxonRankValue>Plantae</taxonRankValue>
+    </taxonomicClassification>
+  </taxonomicCoverage>
+  <citation>Atlas of Living Australia,  Australian Plant Name Index &amp; Australian Plant Census</citation>
+  <structure>
+    <taxon parent="true"/>
+    <vernacular/>
+    <identifier/>
+  </structure>
+</metadata>

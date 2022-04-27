@@ -1,0 +1,12 @@
+Term,DwC,Accepted,Synonym,Misapplied
+Accepted,accepted,true,false,false
+accepted,accepted,true,false,false
+Synonym,synonym,false,true,false
+synonym,synonym,false,true,false
+nomenclatural synonym,homotypicSynonym,false,true,false
+taxonomic synonym,heterotypicSynonym,false,true,false
+Misapplication,misapplied,false,true,true
+misapplication,misapplied,false,true,true
+[Not in Australia],excluded,true,false,true
+Invalid,invalid,false,false,false
+invalid,invalid,false,false,false

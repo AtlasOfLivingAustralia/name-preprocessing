@@ -1,0 +1,25 @@
+<metadata code="NZOR" date="2017-02-13">
+  <title>New Zealand Organisms Register</title>
+  <organization>
+    <individualName>
+      <givenName>Aaron</givenName>
+      <surName>Wilton</surName>
+    </individualName>
+    <organizationName>Landcare Research</organizationName>
+    <positionName>NZOR Manager</positionName>
+    <address>
+        <country>NZ</country>
+    </address>
+    <electronicMailAddress>wiltona@landcareresearch.co.nz</electronicMailAddress>
+    <onlineUrl>http://www.nzor.org.nz</onlineUrl>
+  </organization>
+  <description>Data derived from NZOR for the ALA.</description>
+  <license>This work is licensed under a <ulink url="http://creativecommons.org/licenses/by/4.0/legalcode"><citetitle>Creative Commons Attribution (CC-BY) 4.0 License</citetitle></ulink>.</license>
+  <geographicCoverage>
+    <geographicDescription>Names of organisms relevant to NZ - organisms may or may not be present in New Zealand</geographicDescription>
+  </geographicCoverage>
+  <taxonomicCoverage>
+    <generalTaxonomicCoverage>Coverage of all kingdoms</generalTaxonomicCoverage>
+  </taxonomicCoverage>
+  <citation>Atlas of Living Australia &amp; New Zealand Organisms Register</citation>
+</metadata>

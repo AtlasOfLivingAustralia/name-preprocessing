@@ -1,0 +1,8 @@
+<metadata code="ALA" date="2016-04-07">
+  <title>Atlas of Living Australia Additional Taxa</title>
+  <description>Names that occur in various species lists held by the Atlas of Living Australia that are not found in the standard sources for names. These taxa need to be matched, so that sensitive and conservation status can be found, so a list of additional names with placeholder taxonIDs are generated. Intended use is loading into the Atlas of Living Australia's name indexes.</description>
+  <geographicCoverage>
+    <geographicDescription>Australia</geographicDescription>
+  </geographicCoverage>
+  <citation>Atlas of Living Australia Additional Taxa</citation>
+</metadata>

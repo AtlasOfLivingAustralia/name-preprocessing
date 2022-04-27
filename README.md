@@ -23,6 +23,8 @@ with each directory searched from most- to least-specific.
 For example, APC loads will search `config/APC`, `config/NSL`, and `config`
 in order when looking for configuration files.
 
+See [data/config](data/config) for the ALA configuration.
+
 ### Input directories
 
 By default, `<base>/input`
@@ -40,7 +42,7 @@ For example, the output directory for CAAB data is `output/CAAB`
 Directories that hold intermediate results, error output and execution graphs.
 By default, `<base>/work`
 Each data source has a subdirectory for depositing work files etc.
-For example, the working directory for AFD data is `output/AFD`
+For example, the working directory for AFD data is `work/AFD`
 
 ### List of sources
 
@@ -58,6 +60,8 @@ The columns in the file are:
   * `nzor` New Zealand Organisms Register DwCA
   * `col` Catalogue of Life annual checklist DwCA (2019 version)
   * `ala` Atlas of Living Australia species list
+  * `ala_vernacular_list` Atlas of Living Australia vernacular names list
+  * `github` A species list pulled from github
 * **dir** The default subdirectory name to use 
 * **inputDir** The input subdirectory name, if different to dir 
 * **configDir** Configuration subdirectory names, if different to dir. 
@@ -67,7 +71,10 @@ The columns in the file are:
 * **defaultOrganisation** A default organisation name for the organisation supplying the data, if not available from the collectory
 * **geographicCoverage** A default geographic coverage term for the EML file
 * **taxonomicCoverage** A default taxonomic coverage term for the EML file
-
+* **sourceUrl** Either the source of the data for jobs that pull files from the web or a source template for links to source documents for individual entries.
+* **defaultVernacularStatus** The default vernacular status, defaults to `common`
+* **defaultAcceptedStatus** The default accepted taxonomic status, defaults to `inferredAccepted`
+* **defaultSynonymStatus** The default synonym taxonomic status, defaults to `inferredSynonym`
 ### Publisher
 
 Organisation information about the publisher, called `ala-metadata.csv` and placed in the config directory.
