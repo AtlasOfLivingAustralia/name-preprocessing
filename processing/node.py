@@ -433,7 +433,7 @@ class ProcessingContext(Node):
         value = self.defaults.get(key)
         if value is None:
             if self.parent is not None:
-                value = self.parent.get_default(key)
+                value = self.parent.get_default(key, default)
             else:
                 value = default
         return value

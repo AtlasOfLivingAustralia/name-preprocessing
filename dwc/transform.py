@@ -570,3 +570,170 @@ class DwcAncestorIdentifierGenerator(Transform):
         id = self.taxon_keys.get(ancestor)
         (composed, _id) = self.translator.translate(context, ancestor, parent_id, id)
         return composed
+
+@attr.s
+class DwcSyntheticNames(ThroughTransform):
+    """Create genus/species names for dangling taxa in partial lists"""
+    taxon_keys: Keys = attr.ib()
+    name_keys: Keys = attr.ib()
+    rank_keys: Keys = attr.ib()
+    ranks: List[str] = attr.ib()
+
+    RANK_MARKER = '\\s+(?:gen|sp|ssp|subsp|var|f|form)\\.?'
+    PLACEHOLDER = re.compile('([A-Z][a-z]+)' + RANK_MARKER + '(?:\\s+.*|$)')
+    HYBRID = re.compile('([A-Z][a-z]+)(?:\\s+[a-z]+)?\\s+(?:x\\s+|\u00d7\\s+|\u00d7[a-z]).*')
+    NAME_PARTS = re.compile('([A-Z][a-z]*)(\\s+\\(([A-Z][a-z]*)\\))?(\\s+[a-z]+)(?:' + RANK_MARKER + ')?(\\s+[a-z]+)?.*')
+
+    CLEAR_ALL = [
+        'scientificNameAuthorship',
+        'parentNameUsage',
+        'acceptedNameUsage',
+        'parentNameUsageID',
+        'acceptedNameUsageID',
+        'taxonConceptID',
+        'scientificNameID'
+        'taxonRemarks',
+        'nomenclaturalStatus',
+        'nameComplete',
+        'nameFormatted',
+        'nameAccordingToID',
+        'nameAccordingTo',
+        'namePublishedInID',
+        'namePublishedIn',
+        'namePublishedInYear',
+        'establishmentMeans'
+    ]
+    CLEAR_RANK = {
+        'kingdom': ['phylum', 'class_', 'subclass', 'order', 'suborder', 'infraorder', 'family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
+        'phylum': ['class_', 'subclass', 'order', 'suborder', 'infraorder', 'family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
+        'class': ['subclass', 'order', 'suborder', 'infraorder', 'family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
+        'subclass': ['order', 'suborder', 'infraorder', 'family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
+        'order': ['suborder', 'infraorder', 'family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
+        'suborder': ['infraorder', 'family', 'genus', 'subgenus','specificEpithet', 'infraspecificEpithet'],
+        'infraorder': ['family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
+        'family': ['genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
+        'genus': ['subgenus', 'specificEpithet', 'infraspecificEpithet'],
+        'subgenus': ['specificEpithet', 'infraspecificEpithet'],
+        'species': ['infraspecificEpithet']
+    }
+
+    @classmethod
+    def create(cls, id: str, input: Port, **kwargs):
+        output = Port.port(input.schema)
+        taxon_keys = Keys.make_keys(input.schema, 'taxonID')
+        name_keys = Keys.make_keys(input.schema, 'scientificName')
+        rank_keys = Keys.make_keys(input.schema, 'taxonRank')
+        ranks = ['species', 'subgenus', 'genus', 'family']
+        return DwcSyntheticNames(id, input, output, None, taxon_keys, name_keys, rank_keys, ranks, **kwargs)
+
+    def generate_parents(self, name: str) -> List[Tuple[str, str, str, str, str, str]]:
+        if ' ' not in name:
+            return []
+        match = self.PLACEHOLDER.match(name)
+        if match:
+            genus = match.group(1)
+            return [(genus, 'genus', genus, None, None, None)]
+        match = self.HYBRID.match(name)
+        if match:
+            genus = match.group(1)
+            return [(genus, 'genus', genus, None, None, None)]
+        match = self.NAME_PARTS.match(name)
+        if not match:
+            return []
+        genus = None
+        subgenus = None
+        genus = value = match.group(1).strip()
+        fragments = [(value, 'genus', genus, None, None, None)]
+        if match.group(2):
+            subgenus = match.group(3)
+            value = value + match.group(2)
+            fragments.append((value, 'subgenus', genus, subgenus, None, None))
+        if match.group(5):
+            value = value + match.group(4)
+            fragments.append((value, 'species', genus, subgenus, match.group(4).strip(), None))
+        return fragments
+
+
+    def execute(self, context: ProcessingContext):
+        data = context.acquire(self.input)
+        result = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        names = set()
+        for record in data.rows:
+            names.add(self.name_keys.get(record))
+        for record in data.rows:
+            try:
+                self.count(self.PROCESSED_COUNT, record, context)
+                base_name = self.name_keys.get(record)
+                parents = self.generate_parents(base_name)
+                if record.subgenus is not None and not filter(lambda x: x[1] == 'subgenus', parents):
+                    parents.append((record.subgenus, 'subgenus', record.genus, record.subgenus, None, None))
+                if record.genus is not None and not filter(lambda x: x[1] == 'genus', parents):
+                    parents.append((record.genus, 'genus', record.genus, None, None, None))
+                if record.family is not None:
+                    parents.append((record.family, 'family', None, None, None, None))
+                if record.infraorder is not None:
+                    parents.append((record.infraorder, 'infraorder', None, None, None, None))
+                if record.suborder is not None:
+                    parents.append((record.suborder, 'suborder', None, None, None, None))
+                if record.order is not None:
+                    parents.append((record.order, 'order', None, None, None, None))
+                if record.subclass is not None:
+                    parents.append((record.subclass, 'subclass', None, None, None, None))
+                if record.class_ is not None:
+                    parents.append((record.class_, 'class', None, None, None, None))
+                if record.phylum is not None:
+                    parents.append((record.phylum, 'phylum', None, None, None, None))
+                if record.kingdom is not None:
+                    parents.append((record.kingdom, 'kingdom', None, None, None, None))
+                if len(parents) == 0:
+                    continue
+                taxon_id = self.taxon_keys.get(record)
+                subid = 0
+                modified = Record.copy(record)
+                for (name, rank, genus, subgenus, specificEpithet, infraspecificEpithet) in parents:
+                    if name in names:
+                        continue
+                    if rank not in self.ranks:
+                        continue
+                    names.add(name)
+                    synthetic = Record.copy(record)
+                    ntid = taxon_id + '_' + str(subid)
+                    subid += 1
+                    self.taxon_keys.set(synthetic, ntid)
+                    self.name_keys.set(synthetic, name)
+                    self.rank_keys.set(synthetic, rank)
+                    synthetic.data['genus'] = genus
+                    if modified.genus is None and genus is not None:
+                        modified.data['genus'] = genus
+                    if 'subgenus' in synthetic.data or subgenus is not None:
+                        synthetic.data['subgenus'] = subgenus
+                    if modified.subgenus is None and subgenus is not None:
+                        modified.data['subgenus'] = subgenus
+                    if 'specificEpithet' in synthetic.data or specificEpithet is not None:
+                        synthetic.data['specificEpithet'] = specificEpithet
+                    if modified.specificEpithet is None and specificEpithet is not None:
+                        modified.data['specificEpithet'] = specificEpithet
+                    if 'infraspecificEpithet' in synthetic.data or infraspecificEpithet is not None:
+                        synthetic.data['infraspecificEpithet'] = infraspecificEpithet
+                    synthetic.data['taxonomicStatus'] = context.get_default('defaultTaxonomicStatus', 'inferredAccepted')
+                    for field in self.CLEAR_ALL:
+                        if field in synthetic.data:
+                            synthetic.data[field] = None
+                    clear = self.CLEAR_RANK.get(rank)
+                    if clear is not None:
+                        for level in clear:
+                            if level in synthetic.data:
+                                synthetic.data[level] = None
+                    synthetic.data['provenance'] = "Created from " + base_name + " " + taxon_id + " for inferred placement"
+                    synthetic.data['taxonomicFlags'] = 'synthetic'
+                    result.add(synthetic)
+                    self.count(self.ACCEPTED_COUNT, record, context)
+                result.add(modified)
+            except Exception as err:
+                if self.fail_on_exception:
+                    raise err
+                self.count(self.ERROR_COUNT, record, context)
+                errors.add(Record.error(record, err))
+        context.save(self.output, result)
+        context.save(self.error, errors)

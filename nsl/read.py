@@ -14,7 +14,7 @@
 from ala.transform import PublisherSource, CollectorySource
 from dwc.meta import MetaFile, EmlFile
 from dwc.schema import NomenclaturalCodeMapSchema
-from dwc.transform import DwcIdentifierGenerator, DwcIdentifierTranslator
+from dwc.transform import DwcIdentifierGenerator, DwcIdentifierTranslator, DwcSyntheticNames
 from nsl.schema import TaxonSchema, NameSchema, CommonNameSchema, RankMapSchema, TaxonomicStatusMapSchema
 from nsl.todwc import VernacularToDwcTransform, NslToDwcTaxonTransform, NslAdditionalToDwcTransform
 from processing.dataset import Record, IndexType
@@ -197,10 +197,11 @@ def additional_reader() -> Orchestrator:
                                               'term', reject=True, record_unmatched=True,
                                               lookup_map={'taxonRank': 'mappedTaxonRank',
                                                           'taxonRankLevel': 'taxonRankLevel'})
-    dwc = NslAdditionalToDwcTransform.create("dwc", name_rank_lookup.output, 'inferredAccepted')
-    dwc_output = CsvSink.create("dwc_output", dwc.output, "taxon.csv", "excel", reduce=True)
+    dwc_base = NslAdditionalToDwcTransform.create("dwc_base", name_rank_lookup.output, 'inferredAccepted')
+    dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_base.output)
+    dwc_output = CsvSink.create("dwc_output", dwc_taxon.output, "taxon.csv", "excel", reduce=True)
     vernacular_dwc = VernacularToDwcTransform.create('vernacular_dwc', vernacular_source.output,
-                                                                dwc.output, 'scientificNameID',
+                                                                dwc_taxon.output, 'scientificNameID',
                                                                 'scientific_name_id')
     vernacular_dwc_output = CsvSink.create("vernacular_dwc_output",
                                                       vernacular_dwc.output, "vernacularName.csv", "excel", reduce=True)
@@ -221,7 +222,8 @@ def additional_reader() -> Orchestrator:
         vernacular_source,
         publisher,
         name_rank_lookup,
-        dwc,
+        dwc_base,
+        dwc_taxon,
         vernacular_dwc,
         dwc_output,
         vernacular_dwc_output,

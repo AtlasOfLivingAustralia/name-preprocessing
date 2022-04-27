@@ -248,5 +248,6 @@ class Selector(Node):
             sub_config += context.config_dirs
             sub_work = self.locate_directory(record, self.work_dir_key, context.work_dir, sub_directory)
             sub_context = ProcessingContext.subcontext(context, input_dir=sub_input, config_dirs=sub_config, work_dir=sub_work, output_dir=sub_output, defaults=sub_defaults)
+            self.logger.info("Selected " + node.id)
             node.run(sub_context)
             self.count(self.ACCEPTED_COUNT, record, context)

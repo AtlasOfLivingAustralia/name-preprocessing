@@ -22,6 +22,7 @@ import ala.read
 import ausfungi.read
 import caab.read
 import col.read
+import github.read
 import nsl.read
 import nzor.read
 from processing import fields
@@ -43,7 +44,9 @@ class SourceSchema(Schema):
     geographicCoverage = fields.String(missing=None)
     taxonomicCoverage = fields.String(missing=None)
     sourceUrl = fields.String(missing=None)
-    vernacularStatus = fields.String(missing=None)
+    defaultVernacularStatus = fields.String(missing=None)
+    defaultAcceptedStatus = fields.String(missing=None)
+    defaultSynonymStatus = fields.String(missing=None)
 
 parser = argparse.ArgumentParser(description='Import natureshare data and convert into a DwC file')
 parser.add_argument('-d', '--directory', type=str, help='Base directory', default='.')
@@ -95,6 +98,7 @@ selector = Selector.create(
     nsl.read.reader(),
     nsl.read.additional_reader(),
     nzor.read.reader(),
+    github.read.reader(),
     dummy
 )
 

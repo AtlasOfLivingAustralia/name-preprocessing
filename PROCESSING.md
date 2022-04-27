@@ -217,7 +217,7 @@ Reads data from a CSV file.
 
 Reads data from an Excel spreadshet file.
 
-`processing.source.CsvSink.create(id, file, sheet, schema)`
+`processing.source.ExcelSource.create(id, file, sheet, schema)`
 
 * **file**:str The name of the file to read.
   During processing, the context is used to provide a search path of
@@ -582,6 +582,22 @@ with the taxon key also being the identifier key.
 The generator will follow the trail of ancesotr keys until no further
 ancestors are found.
 
+### [DwcSyntheticNames](dwc/transform.py)
+
+Take a DwC Taxon dataset and generate missing "glue" taxa.
+This trasform is useful for source that are just lists of species names
+with some additional information about higher taxonomy.
+For example, *Gymnorhina tibicen tibicen* implies the existence
+of *Gymnorhina tibicen* and *Gymnorhina*
+
+* **input** The source of names
+
+The generator will create additional synthetic names, marked by `synthetic` in the
+`taxonomicFlags` field; this flag can be used to cull these names from a merged taxonomy. 
+The additional names generated are species (if a infraspecies name), subgenus (if present), genus
+and family if there is a family entry in the input.
+Order, class, phylum and kingdom are currently ignored.
+
 ## Predicates
 
 Predicates are nodes that can be used as a filter predicate in other nodes.
@@ -598,6 +614,19 @@ The species list to read is given by the `datasetID` default value set in the co
 `ala.transform.SpeciesListSource(id)`
 
 * **service**=str The species list web service endpoint. Defaults to `https://lists.ala.org.au/ws`
+
+### [GithubListSource](github/transform.py)
+
+Download a CSV file from github (or another URL) and use it as a source.
+Like the [species list source](#specieslistsourcealatransformpy) this assumes
+a list that can be mined for Dartwin Core terms.
+The URL of the list comes from the `sourceUrl` context parameter.
+
+`github.transform.GithubListSource(id, dialect, encoding)`
+
+* **dialect**:str The name of the CSV dialect to use when reading the list.
+* **encoding**=str The file encoding. Defaults to `utf-8` but may need to be set to `utf-8-sig`
+  to accomodate byte order marks at the start of the file.
 
 ### [CollectorySource](ala/transform.py)
 

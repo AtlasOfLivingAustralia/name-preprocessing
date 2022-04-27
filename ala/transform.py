@@ -10,7 +10,7 @@
 #   WITHOUT WARRANTY OF ANY KIND, either express or
 #   implied. See the License for the specific language governing
 #   rights and limitations under the License.
-
+import urllib.parse
 from typing import Dict
 
 import attr
@@ -27,21 +27,24 @@ from processing.source import Source, CsvSource
 class SpeciesListSource(Source):
     """Read a species list from the ALA species list service"""
     service: str = attr.ib()
+    link: str = attr.ib()
 
     @classmethod
-    def create(cls, id:str, service="https://lists.ala.org.au/ws"):
+    def create(cls, id:str, service="https://lists.ala.org.au/ws", link="https://lists.ala.org.au"):
         schema = ExtendedTaxonSchema()
         output = Port.port(schema)
         error = Port.error_port(schema)
-        return SpeciesListSource(id, output, error, service)
+        return SpeciesListSource(id, output, error, service, link)
 
     def execute(self, context: ProcessingContext):
         output = Dataset.for_port(self.output)
         errors = Dataset.for_port(self.error)
         fieldmap = { (field.data_key if field.data_key is not None else field.name).lower(): field.name for field in self.output.schema.fields.values()}
         dr = context.get_default('datasetID')
+        idstem = "ALA_" + dr.upper() + "_"
+        source = self.link + "/speciesListItem/list/" + dr
         list = requests.get(self.service + "/speciesListItems/" + dr, params={'includeKVP': True}).json()
-        line = 0
+        line = 1
         for item in list:
             data = dict()
             for kv in item.get('kvpValues', []):
@@ -51,15 +54,16 @@ class SpeciesListSource(Source):
                     key = key.lower().replace(' ', '')
                 if key is not None and value is not None and key in fieldmap:
                     data[fieldmap[key]] = value
-            data['taxonID'] = 'ALA_' + str(item['id'])
+            data['taxonID'] = idstem + str(line)
             data['scientificName'] = item['name']
             data['datasetID'] = item['dataResourceUid']
+            data['source'] = source + "?q=" + urllib.parse.quote_plus(item['name'])
             if 'taxonomicStatus' not in data:
                 status = 'inferredUnplaced'
                 if 'kingdom' in data or 'phylum' in data or 'class' in data or 'order' in data or 'family' in data:
-                    status = 'inferredAccepted'
+                    status = context.get_default('defaultAcceptedStatus', 'inferredAccepted')
                 if 'acceptedNameUsage' in data:
-                    status = 'inferredSynonym'
+                    status = context.get_default('defaultSynonymStatus', 'inferredSynonym')
                 data['taxonomicStatus'] = status
             record = Record(line, data, None)
             if data['scientificName'] is None:
@@ -69,6 +73,7 @@ class SpeciesListSource(Source):
                 output.add(record)
                 self.count(self.ACCEPTED_COUNT, record, context)
             self.count(self.PROCESSED_COUNT, record, context)
+            line += 1
         context.save(self.output, output)
         context.save(self.error, errors)
 
@@ -76,14 +81,15 @@ class SpeciesListSource(Source):
 class VernacularListSource(Source):
     """Read a vernacular list from the ALA species list service"""
     service: str = attr.ib()
+    link: str = attr.ib()
     aliases: Dict[str, str] = attr.ib(factory=dict)
 
     @classmethod
-    def create(cls, id:str, aliases={}, service="https://lists.ala.org.au/ws"):
+    def create(cls, id:str, aliases={}, service="https://lists.ala.org.au/ws", link="https://lists.ala.org.au"):
         schema = VernacularNameSchema()
         output = Port.port(schema)
         error = Port.error_port(schema)
-        return VernacularListSource(id, output, error, service, aliases)
+        return VernacularListSource(id, output, error, service, link, aliases)
 
     def execute(self, context: ProcessingContext):
         output = Dataset.for_port(self.output)
@@ -92,8 +98,10 @@ class VernacularListSource(Source):
         additional = { (alias, fieldmap.get(field)) for (alias, field)  in self.aliases.items() }
         fieldmap.update(additional)
         dr = context.get_default('datasetID')
+        idstem = "ALA_" + dr.upper() + "_V"
+        source = self.link + "/speciesListItem/list/" + dr
         list = requests.get(self.service + "/speciesListItems/" + dr, params={'includeKVP': True}).json()
-        line = 0
+        line = 1
         for item in list:
             data = dict()
             for kv in item.get('kvpValues', []):
@@ -101,9 +109,10 @@ class VernacularListSource(Source):
                 value = kv.get('value', None)
                 if key is not None and value is not None and key in fieldmap:
                     data[fieldmap[key]] = value
-            data['taxonID'] = 'ALA_' + str(item['id'])
+            data['taxonID'] = idstem + str(line)
             data['scientificName'] = item['name']
             data['datasetID'] = item['dataResourceUid']
+            data['source'] = source + "?q=" + urllib.parse.quote_plus(item['name'])
             record = Record(line, data, None)
             if data['vernacularName'] is None:
                 errors.add(Record.error(record, None, "No vernacular name"))
@@ -112,7 +121,7 @@ class VernacularListSource(Source):
                 output.add(record)
                 self.count(self.ACCEPTED_COUNT, record, context)
             self.count(self.PROCESSED_COUNT, record, context)
-            line = line + 1
+            line += 1
         context.save(self.output, output)
         context.save(self.error, errors)
 
@@ -187,4 +196,3 @@ class PublisherSource(CsvSource):
         output = Port.port(CollectorySchema())
         error = Port.error_port(output.schema)
         return PublisherSource(id, output, error, file, dialect, **kwargs)
-
