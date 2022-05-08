@@ -130,6 +130,8 @@ class Keys:
             key_fields = (get_key(keys),)
         elif type(keys) == tuple or type(keys) == list:
             key_fields = tuple((get_key(key) for key in keys))
+        if not all(key_fields):
+            return None
         return Keys(key_fields)
 
     def make_key_map(self, record: Record, target: Keys = None) -> Dict[str, object]:

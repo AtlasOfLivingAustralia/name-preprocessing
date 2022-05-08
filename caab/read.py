@@ -10,12 +10,13 @@
 #   WITHOUT WARRANTY OF ANY KIND, either express or
 #   implied. See the License for the specific language governing
 #   rights and limitations under the License.
-
+import dwc.transform
 from ala.transform import PublisherSource, CollectorySource
 from caab.schema import CaabSchema
 from caab.todwc import CaabToDwcTaxonTaxonTransform, CaabToDwcTaxonSynonymTransform, CaabToDwcVernacularTransform
 from dwc.meta import MetaFile, EmlFile
-from dwc.schema import NomenclaturalCodeMapSchema
+from dwc.schema import NomenclaturalCodeMapSchema, NameMapSchema
+from dwc.transform import DwcRename, DwcTaxonValidate
 from processing.dataset import Record
 from processing.orchestrate import Orchestrator
 from processing.sink import CsvSink
@@ -27,6 +28,12 @@ from processing.transform import FilterTransform, MapTransform, strip_markup, no
 def is_current_taxon(record: Record):
     spcode = str(record.SPCODE)
     return not record.NON_CURRENT_FLAG and not spcode.startswith("99") and not spcode.startswith("8") and (record.SCIENTIFIC_NAME is not None or record.DISPLAY_NAME is not None)
+
+def is_usable_taxon(record: Record):
+    name: str = record.scientificName
+    if name is None or len(name) < 2:
+        return False
+    return dwc.transform.SCIENTIFIC_START.match(name)
 
 def clean_scientific(s: str):
     s = strip_markup(s)
@@ -101,10 +108,14 @@ def reader() -> Orchestrator:
     dwc_accepted = CaabToDwcTaxonTaxonTransform.create("dwc_accepted", taxon_coded.output, taxon_clean.output, 'SPCODE', 'PARENT_ID', taxonomicStatus='accepted', allow_unmatched=True)
     dwc_synonym = CaabToDwcTaxonSynonymTransform.create("dwc_synonym", synonyms.output, taxonomicStatus='synonym')
     dwc_taxon = MergeTransform.create("dwc_taxon", dwc_accepted.output, dwc_synonym.output)
+    name_map = CsvSource.create('name_map', 'Name_Map.csv', 'ala', NameMapSchema())
+    dwc_renamed = DwcRename.create('rename', dwc_taxon.output, name_map.output)
+    dwc_usable = FilterTransform.create("dwc_usable", dwc_renamed.output, is_usable_taxon)
+    dwc_validated = DwcTaxonValidate.create("dwc_validated", dwc_usable.output, check_names=True, no_errors=True)
     dwc_vernacular_standard = CaabToDwcVernacularTransform.create("dwc_vernacular_standard", taxon_coded.output, status='standard', isPreferredName=True)
     dwc_vernacular_common = CaabToDwcVernacularTransform.create("dwc_vernacular_common", vernacular.output, status='common', isPreferredName=False)
     dwc_vernacular = MergeTransform.create("dwc_vernacular", dwc_vernacular_standard.output, dwc_vernacular_common.output)
-    taxon_output = CsvSink("dwc_taxon_output", dwc_taxon.output, "taxon.csv", "excel", reduce=True)
+    taxon_output = CsvSink("dwc_taxon_output", dwc_validated.output, "taxon.csv", "excel", reduce=True)
     vernacular_output = CsvSink.create("dwc_vernacular_output", dwc_vernacular.output, "vernacularNames.csv", "excel", reduce=True)
     dwc_meta = MetaFile.create('dwc_meta', taxon_output, vernacular_output)
     publisher = PublisherSource.create('publisher')
@@ -125,6 +136,10 @@ def reader() -> Orchestrator:
                                     dwc_accepted,
                                     dwc_synonym,
                                     dwc_taxon,
+                                    name_map,
+                                    dwc_renamed,
+                                    dwc_usable,
+                                    dwc_validated,
                                     taxon_output,
                                     dwc_vernacular_standard,
                                     dwc_vernacular_common,

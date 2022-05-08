@@ -471,7 +471,7 @@ This is currently oriented towards
 `dwc.meta.EmlFile.create(id, source, publisher)`
 
 * **source**: Port An input port containing metadata for the data source.
-* **publisher**L Port An optional port containing details for the data publisher.
+* **publisher**: Port An optional port containing details for the data publisher.
   
 ### [DwcTaxonValidate](dwc/transform.py)
 
@@ -481,6 +481,7 @@ Any records missing parents or accepted taxa are shunted off to the error port.
 `dwc.transform.DwcTaxonValidate.create(id, input)`
 
 * **input**:Port The main input data source
+* **check_names**=bool If true (the default) check scientific name entries for vague sanity
 
 ### [DwcTaxonClean](dwc/transform.py)
 

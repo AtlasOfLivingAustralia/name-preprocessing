@@ -177,7 +177,7 @@ class Orchestrator(Node):
                     if node.no_errors and context.has_errors(node):
                         self.logger.warning("Halting on errors from %s", node)
                         self.execute_dangling_ports(context)
-                        return
+                        raise ProcessingException(f"Halting on errors from {node}")
                     completed = False
                 except Exception as err:
                     self.logger.error("Error processing node %s - %s", node.id, err)
@@ -186,7 +186,7 @@ class Orchestrator(Node):
         self.dump_graph(context)
         invalid = [node.id for node in self.nodes if not node.is_executable(context)]
         if completed and len(invalid) > 0:
-            raise ProcessingException("Unable to complete nodes " + str(invalid))
+            raise ProcessingException(f"Unable to complete nodes {invalid}")
 
 @attr.s
 class Selector(Node):
@@ -248,6 +248,6 @@ class Selector(Node):
             sub_config += context.config_dirs
             sub_work = self.locate_directory(record, self.work_dir_key, context.work_dir, sub_directory)
             sub_context = ProcessingContext.subcontext(context, input_dir=sub_input, config_dirs=sub_config, work_dir=sub_work, output_dir=sub_output, defaults=sub_defaults)
-            self.logger.info("Selected " + node.id)
+            self.logger.info("Selected %s for %s", node.id, record.id)
             node.run(sub_context)
             self.count(self.ACCEPTED_COUNT, record, context)

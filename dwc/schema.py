@@ -163,3 +163,9 @@ class NomenclaturalCodeMapSchema(Schema):
     kingdom = fields.String()
     nomenclaturalCode = fields.String()
     taxonomicFlags = fields.String()
+
+class NameMapSchema(Schema):
+    original = fields.String()
+    replacement = fields.String(missing=None)
+    rank = fields.String(missing=None)
+    comment = fields.String(missing=None)

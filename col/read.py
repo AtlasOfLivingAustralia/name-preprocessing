@@ -179,7 +179,7 @@ def reader() -> Orchestrator:
         'taxonomicStatus': lambda r: choose(r.mappedTaxonomicStatus, r.taxonomicStatus, 'inferredSynonym' if r.acceptedNameUsageID is not None else 'inferredAccepted'),
         'source': 'references'
     }, auto=True)
-    taxon_validate = DwcTaxonValidate.create("taxon_validate", taxon_map.output)
+    taxon_validate = DwcTaxonValidate.create("taxon_validate", taxon_map.output, check_names=False)
     taxon_output = CsvSink.create("taxon_output", taxon_validate.output, "taxon.csv", "excel", reduce=True)
     vernacular_source = CsvSource.create("vernacular_source", vernacular_file, 'col', col_vernacular_schema, no_errors=False, encoding='utf-8-sig')
     vernacular_language = LookupTransform.create("vernacular_laguage", vernacular_source.output, accepted_languages.output, 'language', 'language', reject=True)

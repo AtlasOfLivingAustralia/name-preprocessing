@@ -13,8 +13,8 @@
 
 from ala.transform import SpeciesListSource, CollectorySource, PublisherSource, VernacularListSource
 from dwc.meta import MetaFile, EmlFile
-from dwc.schema import NomenclaturalCodeMapSchema, VernacularNameSchema, TaxonSchema, VernacularSchema
-from dwc.transform import DwcTaxonValidate, DwcSyntheticNames
+from dwc.schema import NomenclaturalCodeMapSchema, VernacularNameSchema, TaxonSchema, VernacularSchema, NameMapSchema
+from dwc.transform import DwcTaxonValidate, DwcSyntheticNames, DwcRename
 from processing.orchestrate import Orchestrator
 from processing.sink import CsvSink
 from processing.source import CsvSource
@@ -26,9 +26,11 @@ def reader() -> Orchestrator:
     species_list = SpeciesListSource.create('species_list')
     species_metadata = CollectorySource.create('collectory_source')
     taxon_list = ProjectTransform.create("taxon_list", species_list.output, TaxonSchema())
+    name_map = CsvSource.create('name_map', 'Name_Map.csv', 'ala', NameMapSchema())
+    dwc_renamed = DwcRename.create('rename', taxon_list.output, name_map.output)
     nomenclatural_code_map = CsvSource.create('nomenclatural_code_map', 'Nomenclatural_Code_Map.csv', 'ala', NomenclaturalCodeMapSchema())
-    default_codes = LookupTransform.create('default_nomenclatural_codes', taxon_list.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', overwrite=True)
-    dwc_base = DwcTaxonValidate.create("species_validate", default_codes.output)
+    default_codes = LookupTransform.create('default_nomenclatural_codes', dwc_renamed.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', overwrite=True)
+    dwc_base = DwcTaxonValidate.create("species_validate", default_codes.output, check_names=True, no_errors=True)
     dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_base.output)
     dwc_taxon_output = CsvSink.create("dwc_taxon", dwc_taxon.output, "taxon.csv", "excel", reduce=True)
     vernacular_list = FilterTransform.create("vernacular_list", species_list.output, lambda r: r.vernacularName is not None and r.vernacularName != '-')
@@ -51,6 +53,8 @@ def reader() -> Orchestrator:
                                     species_list,
                                     species_metadata,
                                     taxon_list,
+                                    name_map,
+                                    dwc_renamed,
                                     nomenclatural_code_map,
                                     default_codes,
                                     dwc_base,
