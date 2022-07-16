@@ -148,6 +148,32 @@ class IdentifierSchema(Schema):
         uri = 'http://rs.gbif.org/terms/1.0/Identifier'
         namespace = 'http://rs.tdwg.org/dwc/terms/'
 
+class DistributionSchema(Schema):
+    """
+    Schema for distributions
+    """
+    taxonID = fields.String(required=True, metadata={ 'export': True })
+    locationID = fields.String(required=True)
+    locality = fields.String(required=True)
+    countryCode = fields.String(missing=None)
+    lifeStage = fields.String(missing=None, vocabulary='http://rs.gbif.org/vocabulary/gbif/life_stage.xml')
+    occurrenceStatus = fields.String(missing=None, vocabulary='http://rs.gbif.org/vocabulary/gbif/distribution_status_2020-07-15.xml')
+    establishmentMeans = fields.String(missing=None, vocabulary='http://rs.gbif.org/vocabulary/dwc/establishment_means_2022-02-02.xml')
+    degreeOfEstablishment = fields.String(missing=None, vocabulary='http://rs.gbif.org/vocabulary/dwc/degree_of_establishment_2022-02-02.xml')
+    pathway = fields.String(missing=None, vocabulary='http://rs.gbif.org/vocabulary/dwc/pathway_2022-02-02.xml')
+    threatStatus = fields.String(missing=None, uri='http://iucn.org/terms/threatStatus', vocabulary='http://rs.gbif.org/vocabulary/iucn/threat_status.xml')
+    appendixCITES = fields.String(missing=None, uri='http://rs.gbif.org/terms/1.0/appendixCITES', vocabulary='http://rs.gbif.org/vocabulary/un/cites_appendix.xml')
+    eventDate = fields.String(missing=None)
+    source = fields.String(missing=None, uri='http://purl.org/dc/terms/source')
+    occurrenceRemarks = fields.String(missing=None)
+    datasetID = fields.String(missing=None)
+    provenance = fields.String(missing=None, uri='http://purl.org/dc/terms/provenance')
+
+    class Meta:
+        ordered = True
+        uri = 'http://rs.gbif.org/terms/1.0/Distribution'
+        namespace = 'http://rs.tdwg.org/dwc/terms/'
+
 class MappingSchema(Schema):
     term = fields.String()
     mapping = fields.String(missing=None)
@@ -168,4 +194,28 @@ class NameMapSchema(Schema):
     original = fields.String()
     replacement = fields.String(missing=None)
     rank = fields.String(missing=None)
+    comment = fields.String(missing=None)
+
+class EstablishmentMeansMapSchema(Schema):
+    term = fields.String()
+    establishmentMeans = fields.String(missing=None)
+    occurrenceStatus = fields.String(missing=None)
+    degreeOfEstablishment = fields.String(missing=None)
+    pathway = fields.String(missing=None)
+    comment = fields.String(missing=None)
+
+
+class LocationMapSchema(Schema):
+    term = fields.String()
+    locationID = fields.String()
+
+class LocationSchema(Schema):
+    locationID = fields.String()
+    locality = fields.String(missing=None)
+    stateProvince = fields.String(missing=None)
+    country = fields.String(missing=None)
+    countryCode = fields.String(missing=None)
+    islandGroup = fields.String(missing=None)
+    continent = fields.String(missing=None)
+    waterBody = fields.String(missing=None)
     comment = fields.String(missing=None)

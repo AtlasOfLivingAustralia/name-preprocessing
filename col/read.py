@@ -19,7 +19,8 @@ from ala.transform import PublisherSource, CollectorySource
 from col.schema import ColTaxonSchema, ColDistributionSchema, ColVernacularSchema, ColAcceptedKingdomSchema, \
     ColAcceptedDatasetSchema, ColAcceptedLocationSchema, ColAcceptedLanguageSchema
 from dwc.meta import MetaFile, EmlFile
-from dwc.schema import TaxonSchema, VernacularSchema, TaxonomicStatusMapSchema, NomenclaturalCodeMapSchema
+from dwc.schema import TaxonSchema, VernacularSchema, TaxonomicStatusMapSchema, NomenclaturalCodeMapSchema, \
+    LocationMapSchema, LocationSchema
 from dwc.transform import DwcTaxonValidate, DwcTaxonTrail, DwcTaxonReidentify
 from processing.dataset import Port, Index, Keys, Record, IndexType
 from processing.node import ProcessingContext
@@ -125,12 +126,14 @@ def reader() -> Orchestrator:
     taxon_file = "taxa.txt"
     distribution_file = "distribution.txt"
     vernacular_file = "vernacular.txt"
-    kingdom_file = "Accepted_Kingdoms.csv"
-    dataset_file = "Accepted_Datasets.csv"
-    location_file = "Accepted_Locations.csv"
-    language_file = "Accepted_Languages.csv"
+    accepted_kingdom_file = "Accepted_Kingdoms.csv"
+    accepted_dataset_file = "Accepted_Datasets.csv"
+    accepted_location_file = "Accepted_Locations.csv"
+    accepted_language_file = "Accepted_Languages.csv"
     taxonomic_status_file = "Taxonomic_Status_Map.csv"
     nomenclautural_code_file = "Nomenclatural_Code_Map.csv"
+    location_map_file = "Location_Map.csv"
+    location_file = "Location.csv"
 
     col_taxon_schema = ColTaxonSchema()
     col_distribution_schema = ColDistributionSchema()
@@ -141,12 +144,14 @@ def reader() -> Orchestrator:
     col_accepted_language_schema = ColAcceptedLanguageSchema()
     col_taxonomic_status_map_schema = TaxonomicStatusMapSchema()
     col_nomenclatural_code_map_schema = NomenclaturalCodeMapSchema()
+    location_map_schema = LocationMapSchema()
+    location_schema = LocationSchema()
 
     # Only use those taxa from a list of accepted kingdoms and, for some kingdoms, specific locations and datasets
-    accepted_kingdoms = CsvSource.create("accepted_kingdoms", kingdom_file, "ala", col_accepted_kingdom_schema)
-    accepted_datasets = CsvSource.create("accepted_datasets", dataset_file, "ala", col_accepted_dataset_schema)
-    accepted_locations = CsvSource.create("accepted_locations", location_file, "ala", col_accepted_location_schema)
-    accepted_languages = CsvSource.create("accepted_languages", language_file, "ala", col_accepted_language_schema)
+    accepted_kingdoms = CsvSource.create("accepted_kingdoms", accepted_kingdom_file, "ala", col_accepted_kingdom_schema)
+    accepted_datasets = CsvSource.create("accepted_datasets", accepted_dataset_file, "ala", col_accepted_dataset_schema)
+    accepted_locations = CsvSource.create("accepted_locations", accepted_location_file, "ala", col_accepted_location_schema)
+    accepted_languages = CsvSource.create("accepted_languages", accepted_language_file, "ala", col_accepted_language_schema)
     taxonomic_status_map = CsvSource.create("taxonomic_status_map", taxonomic_status_file, "ala", col_taxonomic_status_map_schema)
     nomenclautural_code_map = CsvSource.create("nomenclatural_code_map", nomenclautural_code_file, "ala", col_nomenclatural_code_map_schema)
     # Initial use predicate - filter by kingdom
@@ -181,6 +186,7 @@ def reader() -> Orchestrator:
     }, auto=True)
     taxon_validate = DwcTaxonValidate.create("taxon_validate", taxon_map.output, check_names=False)
     taxon_output = CsvSink.create("taxon_output", taxon_validate.output, "taxon.csv", "excel", reduce=True)
+
     vernacular_source = CsvSource.create("vernacular_source", vernacular_file, 'col', col_vernacular_schema, no_errors=False, encoding='utf-8-sig')
     vernacular_language = LookupTransform.create("vernacular_laguage", vernacular_source.output, accepted_languages.output, 'language', 'language', reject=True)
     vernacular_use = LookupTransform.create("vernacular_use", vernacular_language.output, taxon_trail.output, 'taxonID', 'taxonID', reject=True, merge=False)
@@ -194,7 +200,14 @@ def reader() -> Orchestrator:
         'isPreferredName': MapTransform.constant(False)
     }, auto=True)
     vernacular_output = CsvSink.create("vernacular_output", vernacular_map.output, "vernacularName.csv", "excel", reduce=True)
-    dwc_meta = MetaFile.create('dwc_meta', taxon_output, vernacular_output)
+
+    location_map = CsvSource.create("location_map", location_map_file, "ala", location_map_schema)
+    location = CsvSource.create("location", location_file, "ala", location_schema)
+    distribution_location_id = LookupTransform.create('distribution_location_id', distribution_source.output, location_map.output, 'locality', 'term', lookup_include=['locationID'], overwrite=True, record_unmatched=True)
+    dwc_distribution = LookupTransform.create('dwc_distribution', distribution_location_id.output, location.output, 'locationID', 'locationID', lookup_include = ['locationID', 'locality', 'stateProvince', 'country', 'countryCode', 'islandGroup', 'continent', 'waterBody'], overwrite=True, record_unmatched=True)
+    dwc_distribution_output = CsvSink.create("distribution_output", dwc_distribution.output, "distribution.csv", "excel", reduce=True)
+
+    dwc_meta = MetaFile.create('dwc_meta', taxon_output, vernacular_output, dwc_distribution_output)
     publisher = PublisherSource.create('publisher')
     metadata = CollectorySource.create('metadata')
     dwc_eml = EmlFile.create('dwc_eml', metadata.output, publisher.output)
@@ -227,6 +240,11 @@ def reader() -> Orchestrator:
                                     vernacular_reidentify,
                                     vernacular_map,
                                     vernacular_output,
+                                    location_map,
+                                    location,
+                                    distribution_location_id,
+                                    dwc_distribution,
+                                    dwc_distribution_output,
                                     dwc_meta,
                                     metadata,
                                     publisher,

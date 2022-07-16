@@ -10,7 +10,7 @@
 #   WITHOUT WARRANTY OF ANY KIND, either express or
 #   implied. See the License for the specific language governing
 #   rights and limitations under the License.
-
+import copy
 import uuid
 from collections import OrderedDict
 from enum import Enum
@@ -246,7 +246,9 @@ class Port:
 
         .. versionadded:: 3.0.0
         """
-        attrs = fields.copy()
+        attrs = {k: copy.copy(v) for (k, v) in fields.items()}
+        for (i, k) in enumerate(attrs):
+            attrs[k]._creation_index = i
         attrs["Meta"] = type(
             "GeneratedMeta", (getattr(Schema, "Meta", object),), {"register": False, "ordered": ordered, "uri": uri, "namespace": namespace }
         )

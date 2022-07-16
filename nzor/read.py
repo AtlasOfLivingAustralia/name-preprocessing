@@ -13,8 +13,10 @@
 
 from ala.transform import PublisherSource, CollectorySource
 from dwc.meta import MetaFile, EmlFile
-from dwc.schema import TaxonSchema, VernacularSchema, NomenclaturalCodeMapSchema
-from nzor.schema import NzorTaxonSchema, NzorRankMapSchema, NzorVernacularSchema, NzorLanguageMapSchema
+from dwc.schema import TaxonSchema, VernacularSchema, NomenclaturalCodeMapSchema, DistributionSchema, \
+    EstablishmentMeansMapSchema, LocationMapSchema, LocationSchema
+from nzor.schema import NzorTaxonSchema, NzorRankMapSchema, NzorVernacularSchema, NzorLanguageMapSchema, \
+    NzorDistributionSchema
 from processing.dataset import IndexType
 from processing.orchestrate import Orchestrator
 from processing.sink import CsvSink
@@ -54,18 +56,26 @@ def clean_uninomial(name: str):
 def reader() -> Orchestrator:
     taxon_file = "taxon.txt"
     vernacular_file = "vernacularname.txt"
+    distribution_file = "distribution.txt"
     rank_file = "NZOR_Rank_Map.csv"
     language_file = "Language_Map.csv"
     nomenclatural_code_file = "Nomenclatural_Code_Map.csv"
+    location_map_file = "Location_Map.csv"
+    location_file = "Location.csv"
     nzor_taxon_schema = NzorTaxonSchema()
     nzor_vernacular_schema = NzorVernacularSchema()
+    nzor_distribution_schema = NzorDistributionSchema()
     nzor_rank_map_schema = NzorRankMapSchema()
     nzor_language_map_schema = NzorLanguageMapSchema()
     nomenclatural_code_schema = NomenclaturalCodeMapSchema()
+    location_map_schema = LocationMapSchema()
+    location_schema = LocationSchema()
 
     rank_map = CsvSource.create("rank_map", rank_file, "ala", nzor_rank_map_schema)
     language_map = CsvSource.create("language_map", language_file, "ala", nzor_language_map_schema)
     nomenclatural_code_map = CsvSource.create("nomenclatual_code_map", nomenclatural_code_file, "ala", nomenclatural_code_schema)
+    location_map = CsvSource.create("location_map", location_map_file, "ala", location_map_schema)
+    location = CsvSource.create("location", location_file, "ala", location_schema)
     taxon_source = CsvSource.create("taxon_source", taxon_file, 'excel-tab', nzor_taxon_schema, no_errors=False)
     taxon_coded = LookupTransform.create("taxon_coded", taxon_source.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', lookup_map={ 'nomenclaturalCode': 'kingdomNomenclaturalCode', 'taxonomicFlags': 'taxonomicFlags' })
     taxon_recoded = MapTransform.create("taxon_recoded", taxon_coded.output, nzor_taxon_schema, {
@@ -105,7 +115,13 @@ def reader() -> Orchestrator:
        'source': 'scientificNameID'
     }, auto=True)
     vernacular_output = CsvSink.create("vernacular_output", vernacular_rewrite.output, "vernacularName.csv", "excel", reduce=True)
-    dwc_meta = MetaFile.create('dwc_meta', taxon_output, vernacular_output)
+
+    distribution = CsvSource.create('distribution', distribution_file, 'excel-tab', nzor_distribution_schema)
+    distribution_location_id = LookupTransform.create('distribution_location_id', distribution.output, location_map.output, 'locality', 'term', lookup_include=['locationID'], overwrite=True, record_unmatched=True)
+    dwc_distribution = LookupTransform.create('dwc_distribution', distribution_location_id.output, location.output, 'locationID', 'locationID', lookup_include = ['locationID', 'locality', 'stateProvince', 'country', 'countryCode', 'islandGroup', 'continent', 'waterBody'], overwrite=True, record_unmatched=True)
+    dwc_distribution_output = CsvSink.create("distribution_output", dwc_distribution.output, "distribution.csv", "excel", reduce=True)
+
+    dwc_meta = MetaFile.create('dwc_meta', taxon_output, vernacular_output, dwc_distribution_output)
     publisher = PublisherSource.create('publisher')
     metadata = CollectorySource.create('metadata')
     dwc_eml = EmlFile.create('dwc_eml', metadata.output, publisher.output)
@@ -115,6 +131,8 @@ def reader() -> Orchestrator:
                                     rank_map,
                                     language_map,
                                     nomenclatural_code_map,
+                                    location,
+                                    location_map,
                                     taxon_source,
                                     taxon_coded,
                                     taxon_recoded,
@@ -127,6 +145,10 @@ def reader() -> Orchestrator:
                                     vernacular_linked,
                                     vernacular_rewrite,
                                     vernacular_output,
+                                    distribution,
+                                    dwc_distribution,
+                                    distribution_location_id,
+                                    dwc_distribution_output,
                                     dwc_meta,
                                     metadata,
                                     publisher,

@@ -419,6 +419,17 @@ Denormalise a row into several rows, by splitting the contents of a field.
 The output record will have an "_index" field attached, giving the index number of
 the resulting denormalisation, starting with 0 for the first value in the field.
 
+### [DeduplicateTransform](processing/transform.py)
+
+Remove duplicate entries from a dataset.
+The first record passes through.
+Other records are rejected.
+
+`processing.transform.DeduplicateTransform(id, input, keys)`
+
+* **input**:Port The main input data source
+* **keys** The key(s) that identify a unique record
+
 ## Darwin Core
 
 Nodes that are useful for building Darwin Core Archives

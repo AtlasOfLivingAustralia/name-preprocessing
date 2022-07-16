@@ -85,6 +85,26 @@ class NzorVernacularSchema(Schema):
         ordered = True
 
 
+class NzorDistributionSchema(Schema):
+    id  = fields.String()
+    locationID  = fields.String()
+    locality  = fields.String(missing=None)
+    countryCode = fields.String(missing=None)
+    lifeStage = fields.String(missing=None)
+    occurrenceStatus = fields.String(missing=None)
+    threatStatus = fields.String(missing=None)
+    establishmentMeans = fields.String(missing=None)
+    appendixCITES = fields.String(missing=None)
+    eventDate = fields.String(missing=None)
+    startDayOfYear = fields.String(missing=None)
+    endDayOfYear = fields.String(missing=None)
+    source = fields.String(missing=None)
+    occurrenceRemarks = fields.String(missing=None)
+
+    class Meta:
+        ordered = True
+
+
 class NzorRankMapSchema(Schema):
     rank = fields.String()
     nomenclaturalCode = fields.String(missing=None)

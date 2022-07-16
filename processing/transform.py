@@ -29,6 +29,7 @@ from processing import fields
 from processing.dataset import Port, Dataset, Record, Keys, Index, IndexType
 from processing.node import Node, ProcessingContext, ProcessingException
 
+HREF_MARKUP = re.compile(r'\s*<a [^>]*href\s*=\s*"([^"]*)"[^>]*>')
 STRIP_MARKUP = re.compile(r'(<!--.*-->|<[^>]*>)')
 NORMALISE_SPACES = re.compile(r'\s+')
 
@@ -67,6 +68,14 @@ def strip_markup(s: str):
     s = s.replace('&gt;', '>')
     s = s.replace('&amp;', '&')
     return normalise_spaces(s)
+
+def extract_href(s: str) -> str:
+    if s is None:
+        return None
+    match = HREF_MARKUP.match(s)
+    if match:
+        return match.group(1)
+    return s
 
 def _get_or_default(record: Record, context: ProcessingContext, field: str, key: str):
     val = record.data.get(field)
@@ -884,3 +893,56 @@ class DenormaliseTransform(ThroughTransform):
         record.data["_index"] = index
         return record
 
+@attr.s
+class DeduplicateTransform(ThroughTransform):
+    """
+    Remove duplicate entries.
+
+    The first entry is uses as the chosen entry, all others are duplicates
+    """
+    DUPLICATE_COUNT = "duplicate"
+
+    keys: Keys = attr.ib() # The keys to de-duplcate on
+
+    @classmethod
+    def create(cls, id: str, input: Port, keys, **kwargs):
+        """
+        Create a denomaliser
+
+        :param id: The identifier
+        :param input: The input port
+        :param keys: The keys to deduplicate on
+
+        :return: A deduplicating transform
+        """
+        output = Port.port(input.schema)
+        duplicates = Port.port(input.schema)
+        keys = Keys.make_keys(input.schema, keys)
+        return DeduplicateTransform(id, input, output, duplicates, keys, **kwargs)
+
+    def execute(self, context: ProcessingContext):
+        data = context.acquire(self.input)
+        result = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        duplicates = Dataset.for_port(self.reject)
+        additional = self.build_additional(context)
+        seen = set()
+        for record in data.rows:
+            try:
+                self.count(self.PROCESSED_COUNT, record, context)
+                record_keys = self.keys.get(record)
+                if record_keys in seen:
+                    duplicates.add(record)
+                    self.count(self.DUPLICATE_COUNT, record, context)
+                else:
+                    seen.add(record_keys)
+                    result.add(record)
+                    self.count(self.ACCEPTED_COUNT, record, context)
+            except Exception as err:
+                if self.fail_on_exception:
+                    raise err
+                errors.add(Record.error(record, err))
+                self.count(self.ERROR_COUNT, record, context)
+        context.save(self.output, result)
+        context.save(self.reject, duplicates)
+        context.save(self.error, errors)

@@ -22,6 +22,7 @@ from dwc.schema import VernacularNameSchema, ExtendedTaxonSchema
 from processing.dataset import Port, Dataset, Record
 from processing.node import ProcessingContext
 from processing.source import Source, CsvSource
+from processing.transform import extract_href
 
 @attr.s
 class SpeciesListSource(Source):
@@ -42,7 +43,7 @@ class SpeciesListSource(Source):
         fieldmap = { (field.data_key if field.data_key is not None else field.name).lower(): field.name for field in self.output.schema.fields.values()}
         dr = context.get_default('datasetID')
         idstem = "ALA_" + dr.upper() + "_"
-        source = self.link + "/speciesListItem/list/" + dr
+        defaultSource = self.link + "/speciesListItem/list/" + dr
         list = requests.get(self.service + "/speciesListItems/" + dr, params={'includeKVP': True}).json()
         line = 1
         for item in list:
@@ -57,7 +58,10 @@ class SpeciesListSource(Source):
             data['taxonID'] = idstem + str(line)
             data['scientificName'] = item['name']
             data['datasetID'] = item['dataResourceUid']
-            data['source'] = source + "?q=" + urllib.parse.quote_plus(item['name'])
+            if 'source' in data:
+                data['source'] = extract_href(data['source'])
+            else:
+                data['source'] = defaultSource + "?q=" + urllib.parse.quote_plus(item['name'])
             if 'taxonomicStatus' not in data:
                 status = 'inferredUnplaced'
                 if 'kingdom' in data or 'phylum' in data or 'class' in data or 'order' in data or 'family' in data:
@@ -99,7 +103,7 @@ class VernacularListSource(Source):
         fieldmap.update(additional)
         dr = context.get_default('datasetID')
         idstem = "ALA_" + dr.upper() + "_V"
-        source = self.link + "/speciesListItem/list/" + dr
+        defaultSource = self.link + "/speciesListItem/list/" + dr
         list = requests.get(self.service + "/speciesListItems/" + dr, params={'includeKVP': True}).json()
         line = 1
         for item in list:
@@ -112,7 +116,10 @@ class VernacularListSource(Source):
             data['taxonID'] = idstem + str(line)
             data['scientificName'] = item['name']
             data['datasetID'] = item['dataResourceUid']
-            data['source'] = source + "?q=" + urllib.parse.quote_plus(item['name'])
+            if 'source' in data:
+                data['source'] = extract_href(data['source'])
+            else:
+                data['source'] = defaultSource + "?q=" + urllib.parse.quote_plus(item['name'])
             record = Record(line, data, None)
             if data['vernacularName'] is None:
                 errors.add(Record.error(record, None, "No vernacular name"))

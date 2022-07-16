@@ -19,7 +19,7 @@ from processing.orchestrate import Orchestrator
 from processing.sink import CsvSink
 from processing.source import CsvSource
 from processing.transform import LookupTransform, MapTransform, FilterTransform, ProjectTransform, DenormaliseTransform, \
-    MergeTransform
+    MergeTransform, DeduplicateTransform
 
 
 def reader() -> Orchestrator:
@@ -106,7 +106,8 @@ def vernacular_list_reader() -> Orchestrator:
        'datasetID': MapTransform.orDefault(MapTransform.choose('datasetID'), 'datasetID'),
        'status': MapTransform.orDefault(MapTransform.choose('status'), 'defaultVernacularStatus')
     }, auto=True)
-    name_output = CsvSink.create("name_output", name_transform.output, "vernacularName.csv", "excel", reduce=True)
+    names_unique = DeduplicateTransform.create('names_unique', name_transform.output, ('scientificName', 'vernacularName', 'language'))
+    name_output = CsvSink.create("name_output", names_unique.output, "vernacularName.csv", "excel", reduce=True)
     dwc_meta = MetaFile.create("dwc_meta", name_output)
     publisher = PublisherSource.create("publisher")
     dwc_eml = EmlFile.create('dwc_eml', species_metadata.output, publisher.output)
@@ -116,6 +117,7 @@ def vernacular_list_reader() -> Orchestrator:
                                     vernacular_list,
                                     species_metadata,
                                     name_transform,
+                                    names_unique,
                                     name_output,
                                     dwc_meta,
                                     publisher,
