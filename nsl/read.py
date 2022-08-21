@@ -14,15 +14,17 @@
 from ala.transform import PublisherSource, CollectorySource
 from dwc.meta import MetaFile, EmlFile
 from dwc.schema import NomenclaturalCodeMapSchema, DistributionSchema, EstablishmentMeansMapSchema, LocationMapSchema, \
-    LocationSchema
-from dwc.transform import DwcIdentifierGenerator, DwcIdentifierTranslator, DwcSyntheticNames
+    LocationSchema, VernacularStatusSchema
+from dwc.transform import DwcIdentifierGenerator, DwcIdentifierTranslator, DwcSyntheticNames, DwcVernacularStatus, \
+    DwcDefaultDistribution
 from nsl.schema import TaxonSchema, NameSchema, CommonNameSchema, RankMapSchema, TaxonomicStatusMapSchema
 from nsl.todwc import VernacularToDwcTransform, NslToDwcTaxonTransform, NslAdditionalToDwcTransform
 from processing.dataset import Record, IndexType
 from processing.orchestrate import Orchestrator
 from processing.sink import CsvSink
 from processing.source import CsvSource
-from processing.transform import FilterTransform, LookupTransform, MergeTransform, DenormaliseTransform, MapTransform
+from processing.transform import FilterTransform, LookupTransform, MergeTransform, DenormaliseTransform, MapTransform, \
+    ProjectTransform
 import re
 
 LOC_AND_ER = re.compile(r'\s*([A-Za-z]+)\s+\(([a-z\s]+)\)\s*')
@@ -89,6 +91,7 @@ def reader() -> Orchestrator:
     establishment_means_map_file = "Establishment_Means_Map.csv"
     location_map_file = "Location_Map.csv"
     location_file = "Location.csv"
+    vernacular_status_file = "Vernacular_Status.csv"
     rank_map_file = "ranks.csv"
     taxon_schema = TaxonSchema()
     name_schema = NameSchema()
@@ -100,6 +103,7 @@ def reader() -> Orchestrator:
     establishment_means_schema = EstablishmentMeansMapSchema()
     location_map_schema = LocationMapSchema()
     location_schema = LocationSchema()
+    vernacular_status_schema = VernacularStatusSchema()
 
     taxon_source = CsvSource.create("taxon_source", taxon_file, "excel", taxon_schema, no_errors=False)
     scientific_taxon = FilterTransform.create("scientific_taxon", taxon_source.output, is_scientific_taxon)
@@ -140,7 +144,9 @@ def reader() -> Orchestrator:
 
     vernacular_source = CsvSource.create('vernacular_source', vernacular_name_file, "excel", common_name_schema, no_errors=False)
     vernacular_dwc = VernacularToDwcTransform.create('vernacular_dwc', vernacular_source.output, taxon_dwc.output, 'scientificNameID', 'scientific_name_id')
-    vernacular_dwc_output = CsvSink.create("vernacular_dwc_output", vernacular_dwc.output, "vernacularName.csv", "excel")
+    vernacular_status = CsvSource.create("vernacular_status", vernacular_status_file, "ala", vernacular_status_schema)
+    vernacular_dwc_filtered = DwcVernacularStatus.create("vernacular_dwc_filtered", vernacular_dwc.output, vernacular_status.output)
+    vernacular_dwc_output = CsvSink.create("vernacular_dwc_output", vernacular_dwc_filtered.output, "vernacularName.csv", "excel")
 
     dwc_identifier = DwcIdentifierGenerator.create('dwc_identifier', taxon_dwc.output, 'taxonID', 'taxonID',
         DwcIdentifierTranslator.regex('^https://', 'http://', title = 'Taxon', status = 'variant'),
@@ -151,13 +157,17 @@ def reader() -> Orchestrator:
     distribution = DenormaliseTransform.create('distribution', reference_taxon.output, 'taxonDistribution', ',')
     dwc_distribution_base = MapTransform.create('distribution_dwc', distribution.output, distribution_schema, {
         'taxonID': 'taxonID',
+        'datasetID': MapTransform.default('datasetID'),
         'locality': extract_location,
         'establishmentMeans': extract_establishment_means
     }, )
-    dwc_distribution_location_id = LookupTransform.create('distribution_location_id', dwc_distribution_base.output, location_map.output, 'locality', 'term', record_unmatched=True)
-    dwc_distribution_location = LookupTransform.create('distribution_location', dwc_distribution_location_id.output, location.output, 'locationID', 'locationID', lookup_include = ['locationID', 'locality', 'stateProvince', 'country', 'countryCode', 'islandGroup', 'continent', 'waterBody'], overwrite=True, record_unmatched=True)
+    dwc_distribution_location_id = LookupTransform.create('distribution_location_id', dwc_distribution_base.output, location_map.output, 'locality', 'locality', lookup_include = ['locationID'], lookup_type=IndexType.FIRST, record_unmatched=True)
+    dwc_distribution_location = LookupTransform.create('distribution_location', dwc_distribution_location_id.output, location.output, 'locationID', 'locationID', lookup_include = ['locationID', 'locality'], overwrite=True, record_unmatched=True)
     dwc_distribution = LookupTransform.create('distribution_establishment_means', dwc_distribution_location.output, establishment_means_map.output, 'establishmentMeans', 'term', lookup_include = ['establishmentMeans'], overwrite=True, record_unmatched=True)
-    dwc_distribution_output = CsvSink.create("distribution_output", dwc_distribution.output, "distribution.csv", "excel", reduce=True)
+    dwc_default_distribution = DwcDefaultDistribution.create('default_distribution', taxon_dwc.output, dwc_distribution.output, location.output)
+    dwc_merged_distribution = MergeTransform.create('merged_distribution', dwc_default_distribution.output, dwc_distribution.output)
+    dwc_projected_distribution = ProjectTransform.create('projected_distribution', dwc_merged_distribution.output, DistributionSchema())
+    dwc_distribution_output = CsvSink.create("distribution_output", dwc_projected_distribution.output, "distribution.csv", "excel", reduce=True)
 
     dwc_meta = MetaFile.create('dwc_meta', taxon_dwc_output, vernacular_dwc_output, dwc_identifier_output, dwc_distribution_output)
     publisher = PublisherSource.create('publisher')
@@ -205,6 +215,8 @@ def reader() -> Orchestrator:
                                     taxon_dwc_output,
                                     vernacular_source,
                                     vernacular_dwc,
+                                    vernacular_status,
+                                    vernacular_dwc_filtered,
                                     vernacular_dwc_output,
                                     dwc_identifier,
                                     dwc_identifier_output,
@@ -213,6 +225,9 @@ def reader() -> Orchestrator:
                                     dwc_distribution_location_id,
                                     dwc_distribution_location,
                                     dwc_distribution,
+                                    dwc_default_distribution,
+                                    dwc_merged_distribution,
+                                    dwc_projected_distribution,
                                     dwc_distribution_output,
                                     dwc_meta,
                                     metadata,
@@ -234,6 +249,8 @@ def additional_reader() -> Orchestrator:
     rank_source = CsvSource.create("rank_source", rank_map_file, "ala", rank_map_schema)
     taxon_file = "taxon.csv"
     taxon_schema = TaxonSchema()
+    vernacular_status_file = "Vernacular_Status.csv"
+    vernacular_status_schema = VernacularStatusSchema()
 
     taxon_source = CsvSource.create("taxon_source", taxon_file, "excel", taxon_schema, no_errors=False)
     name_source = CsvSource.create("name_source", name_file, "excel", name_schema, no_errors=False)
@@ -255,8 +272,10 @@ def additional_reader() -> Orchestrator:
     vernacular_dwc = VernacularToDwcTransform.create('vernacular_dwc', vernacular_source.output,
                                                                 dwc_taxon.output, 'scientificNameID',
                                                                 'scientific_name_id')
+    vernacular_status = CsvSource.create("vernacular_status", vernacular_status_file, "ala", vernacular_status_schema)
+    vernacular_dwc_filtered = DwcVernacularStatus.create("vernacular_dwc_filtered", vernacular_dwc.output, vernacular_status.output)
     vernacular_dwc_output = CsvSink.create("vernacular_dwc_output",
-                                                      vernacular_dwc.output, "vernacularName.csv", "excel", reduce=True)
+                                                      vernacular_dwc_filtered.output, "vernacularName.csv", "excel", reduce=True)
 
     dwc_meta = MetaFile.create('additional_dwc_meta', dwc_output,
                                           vernacular_dwc_output)
@@ -277,6 +296,8 @@ def additional_reader() -> Orchestrator:
         dwc_base,
         dwc_taxon,
         vernacular_dwc,
+        vernacular_status,
+        vernacular_dwc_filtered,
         dwc_output,
         vernacular_dwc_output,
         dwc_meta,

@@ -15,8 +15,8 @@ from ala.transform import PublisherSource, CollectorySource
 from caab.schema import CaabSchema
 from caab.todwc import CaabToDwcTaxonTaxonTransform, CaabToDwcTaxonSynonymTransform, CaabToDwcVernacularTransform
 from dwc.meta import MetaFile, EmlFile
-from dwc.schema import NomenclaturalCodeMapSchema, NameMapSchema
-from dwc.transform import DwcRename, DwcTaxonValidate
+from dwc.schema import NomenclaturalCodeMapSchema, NameMapSchema, ScientificNameStatusSchema
+from dwc.transform import DwcRename, DwcTaxonValidate, DwcScientificNameStatus
 from processing.dataset import Record
 from processing.orchestrate import Orchestrator
 from processing.sink import CsvSink
@@ -73,10 +73,13 @@ def clean_rank(s: str):
 def reader() -> Orchestrator:
     taxon_file = "caab_species.xls"
     nomenclatural_code_file = "Nomenclatural_Code_Map.csv"
+    scientific_name_status_file = "Scientific_Name_Patterns.csv"
     caab_schema = CaabSchema()
     caab_nomenclatural_code_schema = NomenclaturalCodeMapSchema()
+    scientific_name_status_schema = ScientificNameStatusSchema()
 
     nomenclatural_code_map = CsvSource.create("nomenclatural_code_map", nomenclatural_code_file, "ala", caab_nomenclatural_code_schema)
+    name_patterns = CsvSource.create("name_patterns", scientific_name_status_file, 'excel', scientific_name_status_schema)
     taxon_source = ExcelSource.create("taxon_source", taxon_file, None, caab_schema, no_errors=False)
     taxon_current = FilterTransform.create("taxon_current", taxon_source.output, is_current_taxon)
     taxon_clean = MapTransform.create("taxon_clean",  taxon_current.output, caab_schema, {
@@ -107,7 +110,8 @@ def reader() -> Orchestrator:
     vernacular = DenormaliseTransform.create("vernacular", taxon_coded.output, 'COMMON_NAMES_LIST', '|', include_empty=False)
     dwc_accepted = CaabToDwcTaxonTaxonTransform.create("dwc_accepted", taxon_coded.output, taxon_clean.output, 'SPCODE', 'PARENT_ID', taxonomicStatus='accepted', allow_unmatched=True)
     dwc_synonym = CaabToDwcTaxonSynonymTransform.create("dwc_synonym", synonyms.output, taxonomicStatus='synonym')
-    dwc_taxon = MergeTransform.create("dwc_taxon", dwc_accepted.output, dwc_synonym.output)
+    dwc_synonym_status = DwcScientificNameStatus.create('dwc_synonym_status', dwc_synonym.output, name_patterns.output)
+    dwc_taxon = MergeTransform.create("dwc_taxon", dwc_accepted.output, dwc_synonym_status.output)
     name_map = CsvSource.create('name_map', 'Name_Map.csv', 'ala', NameMapSchema())
     dwc_renamed = DwcRename.create('rename', dwc_taxon.output, name_map.output)
     dwc_usable = FilterTransform.create("dwc_usable", dwc_renamed.output, is_usable_taxon)
@@ -127,6 +131,7 @@ def reader() -> Orchestrator:
     orchestrator = Orchestrator("caab",
                                 [
                                     nomenclatural_code_map,
+                                    name_patterns,
                                     taxon_source,
                                     taxon_current,
                                     taxon_clean,
@@ -135,6 +140,7 @@ def reader() -> Orchestrator:
                                     vernacular,
                                     dwc_accepted,
                                     dwc_synonym,
+                                    dwc_synonym_status,
                                     dwc_taxon,
                                     name_map,
                                     dwc_renamed,

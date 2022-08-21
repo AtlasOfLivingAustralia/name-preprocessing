@@ -320,9 +320,12 @@ class Index:
         else:
             raise ValueError("Duplicate key " + str(key))
 
+    def findByKey(self, key) -> Record:
+        return self.index.get(key)
+
     def find(self, record: Record, keys: Keys) -> Record:
         key = keys.get(record)
-        return self.index.get(key)
+        return self.findByKey(key)
 
 
 

@@ -18,8 +18,9 @@ from afd.schema import TaxonSchema, NameSchema, TaxonomicStatusMapSchema, Refere
 from afd.todwc import AcceptedToDwcTaxonTransform, SynonymToDwcTaxonTransform, VernacularToDwcTransform
 from ala.transform import PublisherSource, CollectorySource
 from dwc.meta import MetaFile, EmlFile
-from dwc.schema import NomenclaturalCodeMapSchema
-from dwc.transform import DwcTaxonParent, DwcIdentifierGenerator, DwcIdentifierTranslator, DwcAncestorIdentifierGenerator
+from dwc.schema import NomenclaturalCodeMapSchema, VernacularStatusSchema, LocationSchema
+from dwc.transform import DwcTaxonParent, DwcIdentifierGenerator, DwcIdentifierTranslator, \
+    DwcAncestorIdentifierGenerator, DwcVernacularStatus, DwcDefaultDistribution
 from processing.dataset import Record, IndexType
 from processing.orchestrate import Orchestrator
 from processing.sink import CsvSink, NullSink
@@ -67,6 +68,10 @@ def reader():
     reference_schema = ReferenceSchema()
     publication_schema = PublicationSchema()
     nomenclatural_code_map_schema = NomenclaturalCodeMapSchema()
+    vernacular_status_file = "Vernacular_Status.csv"
+    vernacular_status_schema = VernacularStatusSchema()
+    location_file = "Location.csv"
+    location_schema = LocationSchema()
 
 
     taxon_source = CsvSource.create("taxon_source", taxon_file, "afd", taxon_schema, no_errors=False)
@@ -106,7 +111,9 @@ def reader():
     dwc_taxon_output = CsvSink.create("dwc_taxon_output", dwc_taxon_coded.output, "taxon.csv", "excel")
 
     dwc_vernacular = VernacularToDwcTransform.create('dwc_vernacular', vernacular_name.output, taxon_rank_lookup.output, 'TAXON_ID', 'TAXON_ID', fail_on_exception=True)
-    dwc_vernacular_output = CsvSink.create("dwc_vernacular_output", dwc_vernacular.output, "vernacularName.csv", "excel")
+    vernacular_status = CsvSource.create("vernacular_status", vernacular_status_file, "ala", vernacular_status_schema)
+    vernacular_dwc_filtered = DwcVernacularStatus.create("vernacular_dwc_filtered", dwc_vernacular.output, vernacular_status.output)
+    dwc_vernacular_output = CsvSink.create("dwc_vernacular_output", vernacular_dwc_filtered.output, "vernacularName.csv", "excel")
 
     dwc_base_identifier = DwcIdentifierGenerator.create("dwc_base_identifiers", dwc_taxon_coded.output, 'taxonID', 'taxonID',
         DwcIdentifierTranslator.create(lambda context, record, identifier: identifier, title = 'Taxon', status = 'current'),
@@ -130,7 +137,11 @@ def reader():
     dwc_identifier = MergeTransform.create("dwc_identifier_merged", dwc_ancestor_identifier.output, dwc_rewritten_identifier.output, fail_on_exception=True)
     dwc_identifier_output = CsvSink.create("dwc_identifier_output", dwc_identifier.output, "identifier.csv", "excel", reduce=True)
 
-    dwc_meta = MetaFile.create('dwc_meta', dwc_taxon_output, dwc_vernacular_output, dwc_identifier_output)
+    location = CsvSource.create("location", location_file, "ala", location_schema)
+    dwc_default_distribution = DwcDefaultDistribution.create('default_distribution', dwc_taxon_coded.output, None, location.output)
+    dwc_distribution_output = CsvSink.create("distribution_output", dwc_default_distribution.output, "distribution.csv", "excel", reduce=True)
+
+    dwc_meta = MetaFile.create('dwc_meta', dwc_taxon_output, dwc_vernacular_output, dwc_identifier_output, dwc_distribution_output)
     publisher = PublisherSource.create('publisher')
     metadata = CollectorySource.create('metadata')
     dwc_eml = EmlFile.create('dwc_eml', metadata.output, publisher.output)
@@ -167,6 +178,8 @@ def reader():
                                     dwc_taxon_coded,
                                     dwc_taxon_output,
                                     dwc_vernacular,
+                                    vernacular_status,
+                                    vernacular_dwc_filtered,
                                     dwc_vernacular_output,
                                     dwc_base_identifier,
                                     dwc_ancestor_identifier,
@@ -174,6 +187,9 @@ def reader():
                                     dwc_rewritten_identifier,
                                     dwc_identifier,
                                     dwc_identifier_output,
+                                    location,
+                                    dwc_default_distribution,
+                                    dwc_distribution_output,
                                     dwc_meta,
                                     metadata,
                                     publisher,

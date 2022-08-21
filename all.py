@@ -47,6 +47,8 @@ class SourceSchema(Schema):
     defaultVernacularStatus = fields.String(missing=None)
     defaultAcceptedStatus = fields.String(missing=None)
     defaultSynonymStatus = fields.String(missing=None)
+    defaultLocationID = fields.String(missing=None)
+    applyLocationToTaxonomicStatus = fields.String(missing=None)
 
 parser = argparse.ArgumentParser(description='Import natureshare data and convert into a DwC file')
 parser.add_argument('-d', '--directory', type=str, help='Base directory', default='.')
@@ -108,7 +110,9 @@ defaults = {
     'countryCode': 'AU',
     'status': 'common',
     'isPreferredName': False,
-    'locationID': 'AUS'
+    'locationID': 'AUS',
+    'defaultLocationID': 'http://vocab.getty.edu/tgn/7000490',
+    'applyLocationToTaxonomicStatus': 'misapplied|excluded|inferredMisapplied|inferredExcluded|miscellaneousLiterature'
 }
 
 context = ProcessingContext.create('all', dangling_sink_class=CsvSink, config_dirs=config_dirs, input_dir=input_dir, work_dir=work_dir, output_dir=output_dir, log_level=log_level, clear_work_dir=clear, defaults=defaults, dump=dump)

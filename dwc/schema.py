@@ -206,16 +206,43 @@ class EstablishmentMeansMapSchema(Schema):
 
 
 class LocationMapSchema(Schema):
-    term = fields.String()
     locationID = fields.String()
+    locality = fields.String()
+
+    class Meta:
+        ordered = True
+        uri = 'http://ala.org.au/terms/1.0/LocationName'
+        namespace = 'http://rs.tdwg.org/dwc/terms/'
 
 class LocationSchema(Schema):
+    """
+    Schema for the output of a simple Darwin Core Occurrence
+    """
     locationID = fields.String()
-    locality = fields.String(missing=None)
-    stateProvince = fields.String(missing=None)
-    country = fields.String(missing=None)
+    parentLocationID = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/parentLocationID')
+    datasetID = fields.String(missing=None)
+    geographyType = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/geographyType')
+    locality = fields.String()
     countryCode = fields.String(missing=None)
-    islandGroup = fields.String(missing=None)
-    continent = fields.String(missing=None)
-    waterBody = fields.String(missing=None)
-    comment = fields.String(missing=None)
+    decimalLatitude = fields.Float(missing=None)
+    decimalLongitude = fields.Float(missing=None)
+    area = fields.Float(missing=None, uri='http://ala.org.au/terms/1.0/area')
+
+    class Meta:
+        ordered = True
+        uri = 'http://rs.tdwg.org/dwc/terms/Location'
+        namespace = 'http://rs.tdwg.org/dwc/terms/'
+
+class VernacularStatusSchema(Schema):
+    pattern = fields.String()
+    include = fields.Boolean()
+    status = fields.String(missing=None)
+    taxonRemarks = fields.String(missing=None)
+
+class ScientificNameStatusSchema(Schema):
+    pattern = fields.String()
+    replace = fields.String()
+    include = fields.Boolean(missing=True)
+    taxonomicStatus = fields.String(missing=None)
+    nomenclaturalStatus = fields.String(missing=None)
+    taxonRemarks = fields.String(missing=None)

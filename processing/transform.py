@@ -19,7 +19,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 from copy import deepcopy
 from inspect import signature
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Set, Any
 
 import attr
 import marshmallow
@@ -272,6 +272,17 @@ class ProjectTransform(ThroughTransform):
     def create(cls, id: str, input: Port, output: Schema, **kwargs):
         output_port = Port.port(output)
         return ProjectTransform(id, input, output_port, None, **kwargs)
+
+    @classmethod
+    def create_from(cls, id: str, input: Port, *args, **kwargs):
+        names = set(args)
+        reschema = OrderedDict()
+        for (name, field) in input.schema.fields.items():
+            if name in names:
+                mf = deepcopy(field)
+                reschema[name] = mf
+        output = Port.port(Port.schema_from_dict(reschema, ordered=True)())
+        return ProjectTransform(id, input, output, None, **kwargs)
 
     def compose(self, record: Record, context: ProcessingContext, additional) -> Record:
         projected = dict()
@@ -945,4 +956,75 @@ class DeduplicateTransform(ThroughTransform):
                 self.count(self.ERROR_COUNT, record, context)
         context.save(self.output, result)
         context.save(self.reject, duplicates)
+        context.save(self.error, errors)
+
+@attr.s
+class TrailTransform(ThroughTransform):
+    """
+    Provide a complete reference list of entries, following parent and accepted links.
+
+    Used when we have a reference dataset and a partial collection and we need to include all parents/accepted
+    taxa as well as the actual taxon list.
+    """
+    reference: Port = attr.ib()
+    reference_keys: Keys = attr.ib()
+    parent_keys: Keys = attr.ib()
+    accepted_keys: Keys = attr.ib()
+    predicate: Predicate = attr.ib()
+
+    @classmethod
+    def create(cls, id: str,  input: Port, reference: Port, reference_keys, parent_keys, accepted_keys, predicate: Predicate = None, **kwargs):
+        output = Port.port(reference.schema)
+        reference_keys = Keys.make_keys(input.schema, reference_keys)
+        parent_keys = Keys.make_keys(input.schema, parent_keys)
+        accepted_keys = Keys.make_keys(input.schema, accepted_keys) if accepted_keys else None
+        return TrailTransform(id, input, output, None, reference, reference_keys, parent_keys, accepted_keys, predicate, **kwargs)
+
+    def trace(self, index: Index, record: Record, seen: Dict[Any, Record], result: Dataset, context: ProcessingContext):
+        reference_key = self.reference_keys.get(record)
+        if reference_key in seen:
+            return seen[reference_key]
+        seen[reference_key] = record
+        parent = index.find(record, self.parent_keys)
+        if parent is not None:
+            parent = self.trace(index, parent, seen, result, context)
+            parent_key = self.reference_keys.get(parent) if parent else None
+            self.parent_keys.set(record, parent_key)
+        accepted = index.find(record, self.accepted_keys) if self.accepted_keys else None
+        if accepted is not None:
+            accepted = self.trace(index, accepted, seen, result, context)
+            accepted_key = self.reference_keys.get(accepted) if accepted else None
+            self.accepted_keys.set(record, accepted_key)
+        self.count(self.ACCEPTED_COUNT, record, context)
+        if self.predicate is None or self.predicate.test(record):
+            result.add(record)
+            return record
+        if self.predicate is None or self.predicate.test(parent):
+            seen[reference_key] = parent
+            return parent
+        seen[reference_key] = None
+        return None
+
+    def execute(self, context: ProcessingContext):
+        data = context.acquire(self.input)
+        reference = context.acquire(self.reference)
+        index = Index.create(reference, self.reference_keys, IndexType.UNIQUE)
+        result = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        seen = dict()
+        for record in data.rows:
+            try:
+                actual = index.find(record, self.reference_keys)
+                if actual is None:
+                    self.count(self.ERROR_COUNT, record, context)
+                    errors.add(Record.error(record, "Missing reference entry"))
+                else:
+                    self.trace(index, actual, seen, result, context)
+            except Exception as err:
+                if self.fail_on_exception:
+                    raise err
+                self.count(self.ERROR_COUNT, record, context)
+                errors.add(Record.error(record, err))
+            self.count(self.PROCESSED_COUNT, record, context)
+        context.save(self.output, result)
         context.save(self.error, errors)

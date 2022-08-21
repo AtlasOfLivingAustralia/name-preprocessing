@@ -1,35 +1,35 @@
-id,job,dir,inputDir,configDir,datasetID,nomenclaturalCode,defaultOrganisation,geographicCoverage,taxonomicCoverage,sourceUrl,defaultVernacularStatus,defaultAcceptedStatus,defaultSynonymStatus
-afd,afd,AFD,,,dr2699,ICZN,Australian Biological Resources Study,Australia,Animalia,,,inferredAccepted,inferredSynonym
-apni,additional_nsl,APNI,APC,"APNI,NSL",dr2700,ICN,Australian Biological Resources Study,Australia,Plantae,,,inferredAccepted,inferredSynonym
-apc,nsl,APC,,"APC,NSL",dr5214,ICN,Australian Biological Resources Study,Australia,Plantae,,,inferredAccepted,inferredSynonym
-ausfungi,nsl,AusFungi,,"AusFungi,NSL",dr2702,ICN,Royal Botanic Gardens Victoria,Australia,Fungi,,,inferredAccepted,inferredSynonym
-ausmoss,nsl,AusMoss,,"AusMoss,NSL",dr2703,ICN,Royal Botanic Gardens Victoria,Australia,Bryophytes,,,inferredAccepted,inferredSynonym
-lichens,nsl,Lichens,,"Lichens,NSL",dr17664,ICN,Australian Biological Resources Study,Australia,"Ascomycota, Basidiomycota",,,inferredAccepted,inferredSynonym
-caab,caab,CAAB,,,dr2704,,CSIRO,Australia,,"https://www.marine.csiro.au/data/caab/taxon_report.cfm?caab_code=",,inferredAccepted,inferredSynonym
-nzor,nzor,NZOR,,,dr2707,,Landcare Research,New Zealand,,,,inferredAccepted,inferredSynonym
-col,col,CoL,,,dr2705,,The Catalogue of Life,,"Archaea, Bacteria, Protozoa, Chromista, Virusesm Fungi",,,inferredAccepted,inferredSynonym
-dr2285,ala,dr2285,,ALA,dr2285,ICN,,New Zealand,Plantae,,common,inferredAccepted,inferredSynonym
-dr7933,ala,dr7933,,ALA,dr7933,,"Atlas of Living Australia",Australia,,,common,inferredAccepted,inferredSynonym
-dr18234,ala,dr18234,,ALA,dr18234,,"Department of Agriculture, Water and the Environment",Australia,,,common,inferredAccepted,inferredSynonym
-dr17825,ala,dr17825,,ALA,dr17825,,"Department of Agriculture, Water and the Environment",Australia,,,common,inferredAccepted,inferredSynonym
-dr16496,ala,dr16496,,ALA,dr16496,,"Department of Agriculture, Water and the Environment",Australia,,,common,inferredAccepted,inferredSynonym
-dr13266,ala_vernacular_list,dr13266,,ALA,dr13266,,"Senior knowledge holders from the Gamilaraay, Yuwaalaraay & Yuwaalayaay languages",Australia,,,traditionalKnowledge,inferredAccepted,inferredSynonym
-dr17880,ala_vernacular_list,dr17880,,ALA,dr17880,,,Australia,,,traditionalKnowledge,inferredAccepted,inferredSynonym
-dr17886,ala_vernacular_list,dr17886,,ALA,dr17886,,,Australia,,,traditionalKnowledge,inferredAccepted,inferredSynonym
-ala-vernacular,ala_vernacular,ALA,,ALA,dr7933,,"Atlas of Living Australia","Australia",,,common,inferredAccepted,inferredSynonym
-dr649,ala,dr649,,ALA,dr649,,"Atlas of Living Australia","Australian Captal Territory, Australia",,,common,inferredAccepted,inferredSynonym
-dr656,ala,dr656,,ALA,dr656,,"Atlas of Living Australia","Australia",,,common,inferredAccepted,inferredSynonym
-dr650,ala,dr650,,ALA,dr650,,"Atlas of Living Australia","New South Wales, Australia",,,common,inferredAccepted,inferredSynonym
-dr651,ala,dr651,,ALA,dr651,,"Atlas of Living Australia","Northern Territory, Australia",,,common,inferredAccepted,inferredSynonym
-dr652,ala,dr652,,ALA,dr652,,"Atlas of Living Australia","Queensland, Australia",,,common,inferredAccepted,inferredSynonym
-dr653,ala,dr653,,ALA,dr653,,"Atlas of Living Australia","South Australia, Australia",,,common,inferredAccepted,inferredSynonym
-dr654,ala,dr654,,ALA,dr654,,"Atlas of Living Australia","Tasmania, Australia",,,common,inferredAccepted,inferredSynonym
-dr655,ala,dr655,,ALA,dr655,,"Atlas of Living Australia","Victoria, Australia",,,common,inferredAccepted,inferredSynonym
-dr2201,ala,dr2201,,ALA,dr2201,,"Atlas of Living Australia","Western Australia, Australia",,,common,inferredAccepted,inferredSynonym
-dr18987,ala,dr18987,,ALA,dr18987,,"Bonn Convention","Global",,,common,inferredAccepted,inferredSynonym
-dr18989,ala,dr18989,,ALA,dr18989,,"CAMBA","Global",,,common,inferredAccepted,inferredSynonym
-dr18988,ala,dr18988,,ALA,dr18988,,"JAMBA","Global",,,common,inferredAccepted,inferredSynonym
-dr18990,ala,dr18990,,ALA,dr18990,,"ROKAMBA","Global",,,common,inferredAccepted,inferredSynonym
-dr487,ala,dr487,,ALA,dr487,,"Atlas of Living Australia","New South Wales, Australia",,,common,inferredAccepted,inferredSynonym
-dr493,ala,dr493,,ALA,dr493,,"Atlas of Living Australia","Queensland, Australia",,,common,inferredAccepted,inferredSynonym
-dr490,ala,dr490,,ALA,dr490,,"Atlas of Living Australia","Victoria, Australia",,,common,inferredAccepted,inferredSynonym
+id,job,dir,inputDir,configDir,datasetID,nomenclaturalCode,defaultOrganisation,geographicCoverage,taxonomicCoverage,sourceUrl,defaultVernacularStatus,defaultAcceptedStatus,defaultSynonymStatus,defaultLocationID,applyLocationToTaxonomicStatus
+afd,afd,AFD,,,dr2699,ICZN,Australian Biological Resources Study,Australia,Animalia,,,inferredAccepted,inferredSynonym,,
+apni,additional_nsl,APNI,APC,"APNI,NSL",dr2700,ICN,Australian Biological Resources Study,Australia,Plantae,,,inferredAccepted,inferredSynonym,,
+apc,nsl,APC,,"APC,NSL",dr5214,ICN,Australian Biological Resources Study,Australia,Plantae,,,inferredAccepted,inferredSynonym,,
+ausfungi,nsl,AusFungi,,"AusFungi,NSL",dr2702,ICN,Royal Botanic Gardens Victoria,Australia,Fungi,,,inferredAccepted,inferredSynonym,,
+ausmoss,nsl,AusMoss,,"AusMoss,NSL",dr2703,ICN,Royal Botanic Gardens Victoria,Australia,Bryophytes,,,inferredAccepted,inferredSynonym,,
+lichens,nsl,Lichens,,"Lichens,NSL",dr17664,ICN,Australian Biological Resources Study,Australia,"Ascomycota, Basidiomycota",,,inferredAccepted,inferredSynonym,,
+caab,caab,CAAB,,,dr2704,,CSIRO,Australia,,"https://www.marine.csiro.au/data/caab/taxon_report.cfm?caab_code=",,inferredAccepted,inferredSynonym,,
+nzor,nzor,NZOR,,,dr2707,,Landcare Research,New Zealand,,,,inferredAccepted,inferredSynonym,http://vocab.getty.edu/tgn/1000226,
+col,col,CoL,,,dr2705,,The Catalogue of Life,,"Archaea, Bacteria, Protozoa, Chromista, Virusesm Fungi",,,inferredAccepted,inferredSynonym,,
+dr2285,ala,dr2285,,ALA,dr2285,ICN,,New Zealand,Plantae,,common,inferredAccepted,inferredSynonym,,
+dr7933,ala,dr7933,,ALA,dr7933,,"Atlas of Living Australia",Australia,,,common,inferredAccepted,inferredSynonym,,
+dr18234,ala,dr18234,,ALA,dr18234,,"Department of Agriculture, Water and the Environment",Australia,,,common,inferredAccepted,inferredSynonym,,
+dr17825,ala,dr17825,,ALA,dr17825,,"Department of Agriculture, Water and the Environment",Australia,,,common,inferredAccepted,inferredSynonym,,
+dr16496,ala,dr16496,,ALA,dr16496,,"Department of Agriculture, Water and the Environment",Australia,,,common,inferredAccepted,inferredSynonym,,
+dr13266,ala_vernacular_list,dr13266,,ALA,dr13266,,"Senior knowledge holders from the Gamilaraay, Yuwaalaraay & Yuwaalayaay languages",Australia,,,traditionalKnowledge,inferredAccepted,inferredSynonym,,
+dr17880,ala_vernacular_list,dr17880,,ALA,dr17880,,,Australia,,,traditionalKnowledge,inferredAccepted,inferredSynonym,,
+dr17886,ala_vernacular_list,dr17886,,ALA,dr17886,,,Australia,,,traditionalKnowledge,inferredAccepted,inferredSynonym,,
+ala-vernacular,ala_vernacular,ALA,,ALA,dr7933,,"Atlas of Living Australia","Australia",,,common,inferredAccepted,inferredSynonym,,
+dr649,ala,dr649,,ALA,dr649,,"Atlas of Living Australia","Australian Captal Territory, Australia",,,common,inferredAccepted,inferredSynonym,,
+dr656,ala,dr656,,ALA,dr656,,"Atlas of Living Australia","Australia",,,common,inferredAccepted,inferredSynonym,,
+dr650,ala,dr650,,ALA,dr650,,"Atlas of Living Australia","New South Wales, Australia",,,common,inferredAccepted,inferredSynonym,,
+dr651,ala,dr651,,ALA,dr651,,"Atlas of Living Australia","Northern Territory, Australia",,,common,inferredAccepted,inferredSynonym,,
+dr652,ala,dr652,,ALA,dr652,,"Atlas of Living Australia","Queensland, Australia",,,common,inferredAccepted,inferredSynonym,,
+dr653,ala,dr653,,ALA,dr653,,"Atlas of Living Australia","South Australia, Australia",,,common,inferredAccepted,inferredSynonym,,
+dr654,ala,dr654,,ALA,dr654,,"Atlas of Living Australia","Tasmania, Australia",,,common,inferredAccepted,inferredSynonym,,
+dr655,ala,dr655,,ALA,dr655,,"Atlas of Living Australia","Victoria, Australia",,,common,inferredAccepted,inferredSynonym,,
+dr2201,ala,dr2201,,ALA,dr2201,,"Atlas of Living Australia","Western Australia, Australia",,,common,inferredAccepted,inferredSynonym,,
+dr18987,ala,dr18987,,ALA,dr18987,,"Bonn Convention","Global",,,common,inferredAccepted,inferredSynonym,,
+dr18989,ala,dr18989,,ALA,dr18989,,"CAMBA","Global",,,common,inferredAccepted,inferredSynonym,,
+dr18988,ala,dr18988,,ALA,dr18988,,"JAMBA","Global",,,common,inferredAccepted,inferredSynonym,,
+dr18990,ala,dr18990,,ALA,dr18990,,"ROKAMBA","Global",,,common,inferredAccepted,inferredSynonym,,
+dr487,ala,dr487,,ALA,dr487,,"Atlas of Living Australia","New South Wales, Australia",,,common,inferredAccepted,inferredSynonym,,
+dr493,ala,dr493,,ALA,dr493,,"Atlas of Living Australia","Queensland, Australia",,,common,inferredAccepted,inferredSynonym,,
+dr490,ala,dr490,,ALA,dr490,,"Atlas of Living Australia","Victoria, Australia",,,common,inferredAccepted,inferredSynonym,,

@@ -15,13 +15,15 @@ from ala.transform import PublisherSource, CollectorySource
 from dwc.meta import MetaFile, EmlFile
 from dwc.schema import TaxonSchema, VernacularSchema, NomenclaturalCodeMapSchema, DistributionSchema, \
     EstablishmentMeansMapSchema, LocationMapSchema, LocationSchema
+from dwc.transform import DwcDefaultDistribution
 from nzor.schema import NzorTaxonSchema, NzorRankMapSchema, NzorVernacularSchema, NzorLanguageMapSchema, \
     NzorDistributionSchema
-from processing.dataset import IndexType
+from processing.dataset import IndexType, Record
 from processing.orchestrate import Orchestrator
 from processing.sink import CsvSink
 from processing.source import CsvSource
-from processing.transform import MapTransform, normalise_spaces, LookupTransform, choose
+from processing.transform import MapTransform, normalise_spaces, LookupTransform, choose, MergeTransform, \
+    ProjectTransform, FilterTransform
 
 
 def clean_author(name: str, author: str):
@@ -52,6 +54,14 @@ def clean_uninomial(name: str):
     except ValueError:
         return name
 
+def present_native(record: Record):
+    """Only include distribution for native/present species"""
+    return record.occurrenceStatus == 'present' and record.establishmentMeans == 'native'
+
+SPECIES_RANKS = set(['anamorph', 'biovar', 'cultivar', 'form', 'formaspecialis', 'hybrid formula', 'pathovar', 'species', 'subform', 'subspecies', 'subvariety', 'variety'])
+def species_and_below(record: Record):
+    """Only include ranks of species and below"""
+    return record.taxonRank in SPECIES_RANKS
 
 def reader() -> Orchestrator:
     taxon_file = "taxon.txt"
@@ -75,7 +85,6 @@ def reader() -> Orchestrator:
     language_map = CsvSource.create("language_map", language_file, "ala", nzor_language_map_schema)
     nomenclatural_code_map = CsvSource.create("nomenclatual_code_map", nomenclatural_code_file, "ala", nomenclatural_code_schema)
     location_map = CsvSource.create("location_map", location_map_file, "ala", location_map_schema)
-    location = CsvSource.create("location", location_file, "ala", location_schema)
     taxon_source = CsvSource.create("taxon_source", taxon_file, 'excel-tab', nzor_taxon_schema, no_errors=False)
     taxon_coded = LookupTransform.create("taxon_coded", taxon_source.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', lookup_map={ 'nomenclaturalCode': 'kingdomNomenclaturalCode', 'taxonomicFlags': 'taxonomicFlags' })
     taxon_recoded = MapTransform.create("taxon_recoded", taxon_coded.output, nzor_taxon_schema, {
@@ -116,10 +125,19 @@ def reader() -> Orchestrator:
     }, auto=True)
     vernacular_output = CsvSink.create("vernacular_output", vernacular_rewrite.output, "vernacularName.csv", "excel", reduce=True)
 
+    location = CsvSource.create("location", location_file, "ala", location_schema)
     distribution = CsvSource.create('distribution', distribution_file, 'excel-tab', nzor_distribution_schema)
-    distribution_location_id = LookupTransform.create('distribution_location_id', distribution.output, location_map.output, 'locality', 'term', lookup_include=['locationID'], overwrite=True, record_unmatched=True)
-    dwc_distribution = LookupTransform.create('dwc_distribution', distribution_location_id.output, location.output, 'locationID', 'locationID', lookup_include = ['locationID', 'locality', 'stateProvince', 'country', 'countryCode', 'islandGroup', 'continent', 'waterBody'], overwrite=True, record_unmatched=True)
-    dwc_distribution_output = CsvSink.create("distribution_output", dwc_distribution.output, "distribution.csv", "excel", reduce=True)
+    distribution_location_id = LookupTransform.create('distribution_location_id', distribution.output, location_map.output, 'locality', 'locality', lookup_include=['locationID'],  overwrite=True, lookup_type=IndexType.FIRST, record_unmatched=True)
+    dwc_distribution = LookupTransform.create('dwc_distribution', distribution_location_id.output, location.output, 'locationID', 'locationID', lookup_include = ['locationID', 'locality', 'countryCode'], overwrite=True, record_unmatched=True)
+    dwc_distribution_filtered = FilterTransform.create('dwc_distribution_filtered', dwc_distribution.output, present_native)
+    dwc_distribution_mapped = MapTransform.create('dwc_distribution_mapped', dwc_distribution_filtered.output, DistributionSchema(), {
+       'taxonID': 'id',
+       'datasetID': MapTransform.default('datasetID'),
+    }, auto=True)
+    dwc_default_distribution = DwcDefaultDistribution.create('default_distribution', taxon_rewrite.output, dwc_distribution_mapped.output, location.output)
+    dwc_merged_distribution = MergeTransform.create('merged_distribution', dwc_distribution_mapped.output, dwc_default_distribution.output)
+    dwc_projected_distribution = ProjectTransform.create('projected_distribution', dwc_merged_distribution.output, DistributionSchema())
+    dwc_distribution_output = CsvSink.create("distribution_output", dwc_projected_distribution.output, "distribution.csv", "excel", reduce=True)
 
     dwc_meta = MetaFile.create('dwc_meta', taxon_output, vernacular_output, dwc_distribution_output)
     publisher = PublisherSource.create('publisher')
@@ -147,7 +165,12 @@ def reader() -> Orchestrator:
                                     vernacular_output,
                                     distribution,
                                     dwc_distribution,
+                                    dwc_distribution_mapped,
                                     distribution_location_id,
+                                    dwc_distribution_filtered,
+                                    dwc_default_distribution,
+                                    dwc_merged_distribution,
+                                    dwc_projected_distribution,
                                     dwc_distribution_output,
                                     dwc_meta,
                                     metadata,

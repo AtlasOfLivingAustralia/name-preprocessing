@@ -309,6 +309,11 @@ and any new fields are set to `None`
 * **input**:Port The source of records.
 * **schema**:marshmallow.Schema The schema to project on to
 
+`processing.transform.ProjectTransform.create_from(id, input, fields...)`
+
+* **input**:Port The source of records
+* **fields**: str The list of field names to include from the source
+
 ### [LookupTransform](processing/transform.py)
 
 Generate a joined output from two inputs.
@@ -430,6 +435,22 @@ Other records are rejected.
 * **input**:Port The main input data source
 * **keys** The key(s) that identify a unique record
 
+### [TrailTransform](processing/transform.py)
+
+Complete a partial dataset by pulling records across from a reference dataset.
+Any missing parent records or accepted records are, recursively, included in the output.
+This transform can be used to compute a partial record set and then include the extra
+entries needed to make the result structurally valid.
+
+`processing.transform.TrailTransform(id, input, reference, reference_keys, parent_keys, accepted_keys)`
+
+* **input**:Port The main input data source
+* **reference**:Port The reference (complete) data source
+* **reference_keys** The keys that identify the record in both the input and reference data (eg 'taxonID')
+* **parent_keys** The keys that provide the parent record in the input dataset (eg. 'parentNameUsageID')
+* **accepted_keys** The keys that provide the accepted record in the input dataset (eg. 'acceptedNameUsageID')
+* **exclude**=Set[str] A list of keys where the parent/accepted should mot be followed
+
 ## Darwin Core
 
 Nodes that are useful for building Darwin Core Archives
@@ -501,21 +522,6 @@ Remove any dangling parents and what-have you from a taxonomy.
 `dwc.transform.DwcTaxonClean.create(id, input)`
 
 * **input**:Port The main input data source
-
-### [DwcTaxonTrail](dwc/transform.py)
-
-Complete a taxonomic dataset by pulling records across from a reference dataset.
-Any missing parent taxa or accepted taxa are, recursively, included in the output.
-This transform can be used to compute a partial taxonomy and then include the extra
-entries needed to make the result structurally valid.
-
-`dwc.transform.DwcTaxonTrail(id, input, reference, reference_keys, parent_keys, accepted_keys)`
-
-* **input**:Port The main input data source
-* **reference**:Port The reference (complete) data source
-* **reference_keys** The keys that identify the taxon identifier in both the input and reference data (eg 'taxonID')
-* **parent_keys** The keys that provide the parent taxon identifier in the input dataset (eg. 'parentNameUsageID')
-* **accepted_keys** The keys that provide the accepted taxon identifier in the input dataset (eg. 'acceptedNameUsageID')
 
 ### [DwcTaxonReidentify](dwc/transform.py)
 
@@ -609,6 +615,22 @@ The generator will create additional synthetic names, marked by `synthetic` in t
 The additional names generated are species (if a infraspecies name), subgenus (if present), genus
 and family if there is a family entry in the input.
 Order, class, phylum and kingdom are currently ignored.
+
+### [DwcVernacularStatus](dwc/transform.py)
+
+Take a list of vernacular names and re-map the status (and whether the name is included
+at all) bases on a status map of patterns.
+This transform can be used to re-prioritise or banish names that are no longer acceptable
+or which have special significance.
+
+* **input** The source of vernacular names
+* **status** The status map consisting of a regular expression pattern, an include flag
+  (False rejects the record entirely) and an optional taxonRemark to append.
+* **vernacular_name_key** The key for vernacular name (defaults to `vernacularName`)
+* **status_key** The ket for the status field (defaults to `status`)
+* **taxon_remarks_key** The key for taxon remarks (defaults to `taxonRemarks`)
+
+This transform always produces a list of rejected names.
 
 ## Predicates
 
