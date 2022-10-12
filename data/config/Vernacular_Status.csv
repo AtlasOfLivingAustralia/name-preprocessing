@@ -1,0 +1,6 @@
+pattern,include,status,taxonRemarks
+.*[Nn]igger.*,false,deprecated,Offensive
+[Dd]arkie,false,deprecated,Offensive
+.*[Bb]lack[ \-]?[Gg]in.*,false,deprecated,Offensive
+.*[Bb]lack[ \-]?[Bb]oy.*,false,deprecated,Offensive
+.*[Bb]lackfellow.*,false,deprecated,Offensive

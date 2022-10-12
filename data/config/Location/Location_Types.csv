@@ -1,0 +1,61 @@
+locationID,name,geographyType
+# Re-typing of elements where the TGN doesn't reflect usage in the ALA
+# Island groups
+1009947,"Conflict Group",islandGroup
+1010216,"Pilas Group",islandGroup
+1010176,"Ninigo Group",islandGroup
+1009987,"Estevan Group",islandGroup
+2490410,"Manhattan Group",islandGroup
+2622733,"Robinson Group",islandGroup
+2302182,"Dutch Group",islandGroup
+2703203,"Summerland Group",islandGroup
+2360699,"Grassy Island Group",islandGroup
+2604493,"Rabbit Island Group",islandGroup
+7797573,"Baffle Group",islandGroup
+7796473,"Crocodile Island Group",islandGroup
+7857621,"Curtis Group",islandGroup
+7867985,"Beverley Group",islandGroup
+7796748,"Fleurieu Group",islandGroup
+7851937,"Glennie Group",islandGroup
+1010103,"Lihir Group",islandGroup
+1010330,"Tapiantana Group",islandGroup
+1010255,"St Matthias Islands",islandGroup
+7798984,"Campbell-Taylor Group",islandGroup
+7848052,"Hogan Group",islandGroup
+1009899,"Bunker Group",islandGroup
+1010074,"Kent Group",islandGroup
+7861254,"Cannibal Group",islandGroup
+1009917,"Capricorn Group",islandGroup
+7862275,"Clara Group",islandGroup
+1010053,"Investigator Group",islandGroup
+7797402,"Pasco Group",islandGroup
+1010298,"Sir Edward Pellew Group",islandGroup
+7854458,"Easter Group",islandGroup
+7799223,"Eastern Group",islandGroup
+7797809,"Elizabeth Group",islandGroup
+1010299,"Sir Joseph Banks Group",islandGroup
+7849122,"Howick Group",islandGroup
+7849120,"Howick Island",islandGroup
+7785880,"Mangrove Group",islandGroup
+1010138,"Mary Ann Group",islandGroup
+7844367,"Lindeman Group",islandGroup
+7834707,"Pelsaert Group",islandGroup
+7824863,"Sir James Smith Group",islandGroup
+7797033,"West Group",islandGroup
+7820945,"Turtle Group",islandGroup
+7798672,"Whitsunday Group",islandGroup
+1009908,"Calamian Group",islandGroup
+1010347,"Tingwon Group",islandGroup
+7871091,"Anser Group",islandGroup
+2304103,"Eagle Wing Group",islandGroup
+2320671,"Excelsior Group",islandGroup
+# Archipelagos
+7799141,"Archipelago de L'Est",islandGroup
+1009887,"Bonaparte Archipelago",islandGroup
+2128901,"Alexander Archipelago",islandGroup
+1009961,"Dampier Archipelago",islandGroup
+1010238,"Recherche, Archipelago of the",islandGroup
+1010317,"Suakin Archipelago",islandGroup
+# Ad hoc remapping
+7844184,"Lancelin Island",islandGroup
+7005666,"Puerto Rico",country

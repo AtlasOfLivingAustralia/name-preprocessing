@@ -87,3 +87,28 @@ The publisher information is added to the EML metadata file.
 
 For example `./venv/bin/python ./all.py -d /data/naming -x --only afd,apc`
 Use `./venv/bin/python ./all.py -h` for a list of options.
+
+## Locations
+
+Locations are derived from the Getty Insitutue Thesaurus of Geographic Names (TGN) http://vocab.getty.edu/
+under the Open Data Commons Attribution Licence (OGC-By) 1.0 https://opendatacommons.org/licenses/by/1-0/
+
+Data from the TGN can be downloaded in XML format from http://tgndownloads.getty.edu/
+These can then be converted into a table by using an [XSLT Script](data/tgn.xslt) and
+then interpreted by the [location](location/location.py) program.
+The downloaded XML files come in a number of parts and you may need to edit them to 
+ensure consistent namespaces and process them incrementally.
+In shell-script:
+
+```shell
+echo "locationID,parentLocationID,name,preferredName,otherNames,iso2,iso3,currency,type,decimalLatitude,decimalLongitude" > locations.csv
+for f in TGN*.xml
+do
+echo $f
+xsltproc /path/to/name-preprocessing/data/tgn.xslt $f >> locations.csv
+done
+```
+
+The script assumes that you're interested in English names; edit as required.
+You may also have to do a little judicious editing to handle embedded quotes properly,
+as well.

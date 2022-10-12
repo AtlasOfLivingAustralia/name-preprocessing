@@ -47,8 +47,10 @@ class GithubListSource(Source):
         fieldmap.update(fieldmap1)
         url = context.get_default('sourceUrl')
         idstem = 'ALA_' + context.get_default('datasetID').upper()
-        list = requests.get(url).text
-        with io.StringIO(list) as ifile:
+        r = requests.get(url)
+        self.logger.debug("Apparent encoding or %s is %s", url, r.apparent_encoding)
+        r.encoding = r.apparent_encoding
+        with io.StringIO(r.text) as ifile:
             reader = csv.DictReader(ifile, dialect=self.dialect)
             line = 1
             for row in reader:

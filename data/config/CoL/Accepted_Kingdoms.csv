@@ -1,7 +1,7 @@
-kingdom,useDistribution,useDataset
-Archaea,false,false
-Bacteria,false,false
-Chromista,false,false
-Fungi,true,true
-Protozoa,false,false
-Viruses,false,false
+kingdom,taxonID,useDistribution,useDataset
+Archaea,R,false,false
+Bacteria,B,false,false
+Chromista,C,false,false
+#Fungi,F,true,true
+Protozoa,Z,false,false
+Viruses,V,false,false

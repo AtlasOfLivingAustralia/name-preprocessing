@@ -18,13 +18,16 @@ from afd.schema import TaxonSchema, NameSchema, TaxonomicStatusMapSchema, Refere
 from afd.todwc import AcceptedToDwcTaxonTransform, SynonymToDwcTaxonTransform, VernacularToDwcTransform
 from ala.transform import PublisherSource, CollectorySource
 from dwc.meta import MetaFile, EmlFile
-from dwc.schema import NomenclaturalCodeMapSchema
-from dwc.transform import DwcTaxonParent, DwcIdentifierGenerator, DwcIdentifierTranslator, DwcAncestorIdentifierGenerator
+from dwc.schema import NomenclaturalCodeMapSchema, VernacularStatusSchema, LocationSchema, DistributionSchema, \
+    LocationMapSchema
+from dwc.transform import DwcTaxonParent, DwcIdentifierGenerator, DwcIdentifierTranslator, \
+    DwcAncestorIdentifierGenerator, DwcVernacularStatus, DwcDefaultDistribution
 from processing.dataset import Record, IndexType
 from processing.orchestrate import Orchestrator
 from processing.sink import CsvSink, NullSink
 from processing.source import CsvSource
-from processing.transform import FilterTransform, LookupTransform, MergeTransform, choose, MapTransform
+from processing.transform import FilterTransform, LookupTransform, MergeTransform, choose, MapTransform, \
+    DenormaliseTransform, ProjectTransform
 
 
 def is_current_taxon(record: Record):
@@ -53,12 +56,12 @@ def is_unused_name(record: Record):
     return not is_valid_name(record) and not is_synonym_name(record) and not is_misapplied_name(record) and not is_vernacular_name(record)
 
 def reader():
-    taxon_file = "taxon.dsv"
-    name_file = "name.dsv"
+    taxon_file = "AFD_taxon_20220905.dsv"
+    name_file = "AFD_name_20220905.dsv"
     taxonomic_status_map_file = "Taxonomic_Status_Map.csv"
     rank_map_file = "Rank_Map.csv"
-    reference_file = "reference.dsv"
-    publication_file = "publication.dsv"
+    reference_file = "AFD_reference_20220905.dsv"
+    publication_file = "AFD_publication_20220905.dsv"
     nomenclautural_code_file = "Nomenclatural_Code_Map.csv"
     taxon_schema = TaxonSchema()
     name_schema = NameSchema()
@@ -67,6 +70,13 @@ def reader():
     reference_schema = ReferenceSchema()
     publication_schema = PublicationSchema()
     nomenclatural_code_map_schema = NomenclaturalCodeMapSchema()
+    vernacular_status_file = "Vernacular_Status.csv"
+    vernacular_status_schema = VernacularStatusSchema()
+    location_file = "Location.csv"
+    location_map_file = "Location_Map.csv"
+    location_schema = LocationSchema()
+    location_map_schema = LocationMapSchema()
+    distribution_schema = DistributionSchema()
 
 
     taxon_source = CsvSource.create("taxon_source", taxon_file, "afd", taxon_schema, no_errors=False)
@@ -106,7 +116,9 @@ def reader():
     dwc_taxon_output = CsvSink.create("dwc_taxon_output", dwc_taxon_coded.output, "taxon.csv", "excel")
 
     dwc_vernacular = VernacularToDwcTransform.create('dwc_vernacular', vernacular_name.output, taxon_rank_lookup.output, 'TAXON_ID', 'TAXON_ID', fail_on_exception=True)
-    dwc_vernacular_output = CsvSink.create("dwc_vernacular_output", dwc_vernacular.output, "vernacularName.csv", "excel")
+    vernacular_status = CsvSource.create("vernacular_status", vernacular_status_file, "ala", vernacular_status_schema)
+    vernacular_dwc_filtered = DwcVernacularStatus.create("vernacular_dwc_filtered", dwc_vernacular.output, vernacular_status.output)
+    dwc_vernacular_output = CsvSink.create("dwc_vernacular_output", vernacular_dwc_filtered.output, "vernacularName.csv", "excel")
 
     dwc_base_identifier = DwcIdentifierGenerator.create("dwc_base_identifiers", dwc_taxon_coded.output, 'taxonID', 'taxonID',
         DwcIdentifierTranslator.create(lambda context, record, identifier: identifier, title = 'Taxon', status = 'current'),
@@ -130,7 +142,23 @@ def reader():
     dwc_identifier = MergeTransform.create("dwc_identifier_merged", dwc_ancestor_identifier.output, dwc_rewritten_identifier.output, fail_on_exception=True)
     dwc_identifier_output = CsvSink.create("dwc_identifier_output", dwc_identifier.output, "identifier.csv", "excel", reduce=True)
 
-    dwc_meta = MetaFile.create('dwc_meta', dwc_taxon_output, dwc_vernacular_output, dwc_identifier_output)
+    location = CsvSource.create("location", location_file, "ala", location_schema)
+    location_map = CsvSource.create("location_map", location_map_file, "ala", location_map_schema)
+    distribution = DenormaliseTransform.create('distribution', taxon_source.output, 'STATE', ',')
+    distribution_linked = LookupTransform.create('distribution_linked', distribution.output, dwc_taxon_coded.output, 'TAXON_GUID_ID', 'taxonID', reject=True)
+    dwc_distribution_base = MapTransform.create('distribution_dwc', distribution_linked.output, distribution_schema, {
+        'taxonID': 'taxonID',
+        'datasetID': MapTransform.default('datasetID'),
+        'locality': 'STATE'
+    })
+    dwc_distribution_location_id = LookupTransform.create('distribution_location_id', dwc_distribution_base.output, location_map.output, 'locality', 'locality', lookup_include = ['locationID'], lookup_type=IndexType.FIRST, record_unmatched=True)
+    dwc_distribution = LookupTransform.create('distribution_location', dwc_distribution_location_id.output, location.output, 'locationID', 'locationID', lookup_include = ['locationID', 'locality'], overwrite=True, record_unmatched=True)
+    dwc_default_distribution = DwcDefaultDistribution.create('default_distribution', dwc_taxon_coded.output, dwc_distribution.output, location.output)
+    dwc_merged_distribution = MergeTransform.create('merged_distribution', dwc_default_distribution.output, dwc_distribution.output)
+    dwc_projected_distribution = ProjectTransform.create('projected_distribution', dwc_merged_distribution.output, DistributionSchema())
+    dwc_distribution_output = CsvSink.create("distribution_output", dwc_projected_distribution.output, "distribution.csv", "excel", reduce=True)
+
+    dwc_meta = MetaFile.create('dwc_meta', dwc_taxon_output, dwc_vernacular_output, dwc_identifier_output, dwc_distribution_output)
     publisher = PublisherSource.create('publisher')
     metadata = CollectorySource.create('metadata')
     dwc_eml = EmlFile.create('dwc_eml', metadata.output, publisher.output)
@@ -167,6 +195,8 @@ def reader():
                                     dwc_taxon_coded,
                                     dwc_taxon_output,
                                     dwc_vernacular,
+                                    vernacular_status,
+                                    vernacular_dwc_filtered,
                                     dwc_vernacular_output,
                                     dwc_base_identifier,
                                     dwc_ancestor_identifier,
@@ -174,6 +204,17 @@ def reader():
                                     dwc_rewritten_identifier,
                                     dwc_identifier,
                                     dwc_identifier_output,
+                                    location,
+                                    location_map,
+                                    distribution,
+                                    distribution_linked,
+                                    dwc_distribution_base,
+                                    dwc_distribution_location_id,
+                                    dwc_distribution,
+                                    dwc_default_distribution,
+                                    dwc_merged_distribution,
+                                    dwc_projected_distribution,
+                                    dwc_distribution_output,
                                     dwc_meta,
                                     metadata,
                                     publisher,

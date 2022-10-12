@@ -1,0 +1,9 @@
+pattern,replace,include,taxonomicStatus,nomenclaturalStatus,taxonRemarks
+(.+) \(.*in part.*\),\1,True,proParteSynonym,,Synonym status inferred from original name \g<0>
+(.+) \(.*mis-?identification.*\),\1,True,misapplied,,Synonym status inferred from original name \g<0>
+(.+) \(.*misapplied.*\),\1,True,misapplied,,Synonym status inferred from original name \g<0>
+(.+) \(.*mis-?spelling.*\),\1,True,,orth. var.,Nomenclatural status inferred from original name \g<0>
+(.+) \(.*mis-?spelt.*\),\1,True,,orth. var.,Nomenclatural status inferred from original name \g<0>
+(.+) \(.*emendation*\),\1,True,,orth. var.,Nomenclatural status inferred from original name \g<0>
+(.+) \(sic\),\1,True,,orth. var.,Nomenclatural status inferred from original name \g<0>
+(.+) \(.*in error.*\),,False,,,Erroneous application - removed - \g<0>

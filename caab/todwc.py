@@ -16,7 +16,7 @@ import attr
 
 import dwc.schema
 from nsl.todwc import choose, strip_markup, normalise_spaces
-from processing.dataset import Port, Keys, Record
+from processing.dataset import Port, Keys, Record, Dataset
 from processing.node import ProcessingContext, ProcessingException
 from processing.transform import ThroughTransform, ReferenceTransform
 
@@ -77,7 +77,7 @@ class CaabToDwcTaxonTaxonTransform(ReferenceTransform):
             'taxonRank': choose(record.RANK, 'unknown'),
             'taxonConceptID': taxonID,
             'taxonomicStatus': self.taxonomicStatus,
-            'taxonRemarks': strip_markup(record.TAXON_WWW_NOTES),
+            'nomenclaturalStatus': None
         }
         errors = self.output.schema.validate(dwc)
         if errors:
@@ -122,7 +122,8 @@ class CaabToDwcTaxonSynonymTransform(ThroughTransform):
             'scientificName': normalise_spaces(scientificName),
             'taxonRank': choose(record.RANK, "unknown"),
             'taxonConceptID': taxonID,
-            'taxonomicStatus': self.taxonomicStatus
+            'taxonomicStatus': self.taxonomicStatus,
+            'nomenclaturalStatus': None
         }
         errors = self.output.schema.validate(dwc)
         if errors:
