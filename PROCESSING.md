@@ -2,7 +2,7 @@
 
 There are a lot of data files in various different forms used to act as sources for 
 the ALA taxonomy. These used to be handled by a massive swirl of Talend jobs.
-However, the jobs were too complicated, too hard to repurposem hard to partition 
+However, the jobs were too complicated, too hard to repurpose, hard to partition 
 and version and Talend has difficulties with iterative processing.
 
 So, this is a port of the various Talend jobs into Python, to make them  more accessible.
@@ -207,15 +207,16 @@ Reads data from a CSV file.
   Each row is matched against the schema and errors are reported.
 * **encoding**=str The file encoding. Defaults to `utf-8` but may need to be set to `utf-8-sig`
   to accomodate byte order marks at the start of the file.
+* **comment**=str The line start to that indicates a comment. Defaults to '#'
 * **predicate**=Callable A Record -> bool predicate for reading rows. The function is called
   with a single argument, the record representing the row, which can be used to eliminate
   unwanted rows from a large dataset before they become a memory problem.
-  By default, all records are accepted.
-  
+  By default, all records are accepted. 
 
 ### [ExcelSource](processing/source.py)
 
-Reads data from an Excel spreadshet file.
+Reads data from an Excel spreadsheet file.
+Only '.xslx' files are accepted.
 
 `processing.source.ExcelSource.create(id, file, sheet, schema)`
 
@@ -223,6 +224,7 @@ Reads data from an Excel spreadshet file.
   During processing, the context is used to provide a search path of
   directories to use to find the file.
 * **sheet**:str The name of sheet within the workbook to read from.
+  If None, the first sheet in the workbook is used.
 * **schema**:marshmallow.Schema The schema that the CSV data has to conform to.
   Each row is matched against the schema and errors are reported.
 * **predicate**=Callable A Record -> bool filter predicate for reading rows. The function is called
@@ -287,6 +289,16 @@ A basic toolkit of ways of filtering, transforming and linking data.
 All transforms have an error port that can be used to report on unpleasentness
 during transformation.
 
+### [NullTransform](processing/transform.py)
+
+A transform that simply copies its input to its output.
+This transform is useful as a placeholder for transforms
+that are conditionally included.
+
+`processing.transform.NullTransform.create(id, input)`
+
+* **input**:Port The source of records
+
 ### [FilterTransform](processing/transform.py)
 
 Filter rows based on a predicate.
@@ -308,6 +320,11 @@ and any new fields are set to `None`
 
 * **input**:Port The source of records.
 * **schema**:marshmallow.Schema The schema to project on to
+
+`processing.transform.ProjectTransform.create_from(id, input, fields...)`
+
+* **input**:Port The source of records
+* **fields**: str The list of field names to include from the source
 
 ### [LookupTransform](processing/transform.py)
 
@@ -419,6 +436,92 @@ Denormalise a row into several rows, by splitting the contents of a field.
 The output record will have an "_index" field attached, giving the index number of
 the resulting denormalisation, starting with 0 for the first value in the field.
 
+### [DeduplicateTransform](processing/transform.py)
+
+Remove duplicate entries from a dataset.
+The first record passes through.
+Other records are rejected.
+
+`processing.transform.DeduplicateTransform(id, input, keys)`
+
+* **input**:Port The main input data source
+* **keys** The key(s) that identify a unique record
+
+### [TrailTransform](processing/transform.py)
+
+Complete a partial dataset by pulling records across from a reference dataset.
+Any missing parent records or accepted records are, recursively, included in the output.
+This transform can be used to compute a partial record set and then include the extra
+entries needed to make the result structurally valid.
+
+`processing.transform.TrailTransform(id, input, reference, reference_keys, parent_keys, accepted_keys)`
+
+* **input**:Port The main input data source
+* **reference**:Port The reference (complete) data source
+* **reference_keys** The keys that identify the record in both the input and reference data (eg 'taxonID')
+* **parent_keys** The keys that provide the parent record in the input dataset (eg. 'parentNameUsageID')
+* **accepted_keys** The keys that provide the accepted record in the input dataset (eg. 'acceptedNameUsageID')
+* **exclude**=Set[str] A list of keys where the parent/accepted should mot be followed
+
+### [VariantTransform](processing/transform.py)
+
+Complete a partial dataset by pulling records across from a reference dataset.
+Any missing parent records or accepted records are, recursively, included in the output.
+This transform can be used to compute a partial record set and then include the extra
+entries needed to make the result structurally valid.
+
+`processing.transform.VariantTransform.create(id, input, keys, transforms ..., allow_duplicates=False)`
+
+* **input**:Port The main input data source
+* **keys** The keys that identify the field to be varied (eg 'locality')
+* **transforms**=List[Callable] A list of transforms that can be applied to the value/record
+* **allow_duplicates=bool** True if duplicates are allowed globally (default False)
+* **annotate=Callable** If set, the function will be called with arguments of the variant value and the variant record before setting the variant value, so that the record can be annotated
+
+### [SortTransform](processing/transform.py)
+
+Sort the data in a port into order.
+
+`processing.transform.SortTransform.create(id, input, keys)`
+
+* **input**:Port The main input data source
+* **key**: Callable A function on a record that provides a sort order
+
+### [AcceptTransform](processing/transform.py)
+
+A filter transform that accepts records based on whether the record is
+present in another set of values.
+
+`processing.transform.AcceptTransform.create(id, input, values, input_keys, value_keys, exclude=False, case_insensitive=False, record_rejects=False)`
+
+* **input**:Port The main input data source
+* **values**:Port The main input data source
+* **input_keys** The keys to match on the input
+* **value_keys** The keys for the value list
+* **exclude**=bool If true, filter on input values not found in the values list, false by default
+* **case_insensitive**=bool If true, match in a case-insensitive manner, false by default
+* **record_rejects**=bool If true, include a port containing rejected records
+
+### [ClusterTransform](processing/transform.py)
+
+Cluster records together and choose one or more representative records from the cluster.
+
+Choosing a single representative record can cause parent-child and synonym
+relationships to break down. The resulting output has identifiers re-mapped.
+
+`processing.transform.ClusterTransform.create(id, input, signature, selector, identifier_keys, parent_keys, accepted_keys, record_rejects=False)`
+
+* **input**:Port The data source to cluster
+* **signature**:Callable A function that generates the clustering signature (usually a tuple) for the record.
+  This signature groups records together.
+* **selector**:Callable An optional  function that takes the records in a cluster and returns one or more selected records.
+  If first selected record is treated as the replacement for any non-selected records
+  when parent and accepted keys are re-written.
+  If None, then the first record in the cluster is used.
+* **identifier_keys** The keys that identify a record for parent/accepted rewriting
+* **parent_keys** The keys that identify a parent record. None if not used.
+* **accepted_keys** The keys that identify an accepted record. None if not used.
+* **record_rejects**=bool Create a port containing all records not selected. False by default.
 ## Darwin Core
 
 Nodes that are useful for building Darwin Core Archives
@@ -471,7 +574,7 @@ This is currently oriented towards
 `dwc.meta.EmlFile.create(id, source, publisher)`
 
 * **source**: Port An input port containing metadata for the data source.
-* **publisher**L Port An optional port containing details for the data publisher.
+* **publisher**: Port An optional port containing details for the data publisher.
   
 ### [DwcTaxonValidate](dwc/transform.py)
 
@@ -481,6 +584,7 @@ Any records missing parents or accepted taxa are shunted off to the error port.
 `dwc.transform.DwcTaxonValidate.create(id, input)`
 
 * **input**:Port The main input data source
+* **check_names**=bool If true (the default) check scientific name entries for vague sanity
 
 ### [DwcTaxonClean](dwc/transform.py)
 
@@ -489,21 +593,6 @@ Remove any dangling parents and what-have you from a taxonomy.
 `dwc.transform.DwcTaxonClean.create(id, input)`
 
 * **input**:Port The main input data source
-
-### [DwcTaxonTrail](dwc/transform.py)
-
-Complete a taxonomic dataset by pulling records across from a reference dataset.
-Any missing parent taxa or accepted taxa are, recursively, included in the output.
-This transform can be used to compute a partial taxonomy and then include the extra
-entries needed to make the result structurally valid.
-
-`dwc.transform.DwcTaxonTrail(id, input, reference, reference_keys, parent_keys, accepted_keys)`
-
-* **input**:Port The main input data source
-* **reference**:Port The reference (complete) data source
-* **reference_keys** The keys that identify the taxon identifier in both the input and reference data (eg 'taxonID')
-* **parent_keys** The keys that provide the parent taxon identifier in the input dataset (eg. 'parentNameUsageID')
-* **accepted_keys** The keys that provide the accepted taxon identifier in the input dataset (eg. 'acceptedNameUsageID')
 
 ### [DwcTaxonReidentify](dwc/transform.py)
 
@@ -598,6 +687,47 @@ The additional names generated are species (if a infraspecies name), subgenus (i
 and family if there is a family entry in the input.
 Order, class, phylum and kingdom are currently ignored.
 
+### [DwcVernacularStatus](dwc/transform.py)
+
+Take a list of vernacular names and re-map the status (and whether the name is included
+at all) bases on a status map of patterns.
+This transform can be used to re-prioritise or banish names that are no longer acceptable
+or which have special significance.
+
+* **input** The source of vernacular names
+* **status** The status map consisting of a regular expression pattern, an include flag
+  (False rejects the record entirely) and an optional taxonRemark to append.
+* **vernacular_name_key** The key for vernacular name (defaults to `vernacularName`)
+* **status_key** The ket for the status field (defaults to `status`)
+* **taxon_remarks_key** The key for taxon remarks (defaults to `taxonRemarks`)
+
+This transform always produces a list of rejected names.
+
+### [DwcScientificNameStatus](dwc/transform.py)
+
+Take a list of taxa and re-map the taxonomic and nomenclatural status 
+(and whether the name is included at all) based on a status map of patterns.
+This transform can be used to rework or banish names basic on additional 
+
+* **input** The source of vernacular names
+* **status** The status map consisting of a regular expression pattern, a replacement name,
+  an include flag (False rejects the record entirely) 
+  a taxonomic status and nonenclatural status to add 
+  and an optional taxonRemark to append.
+* **scientific_name_key** The key for scientific name (defaults to `scientificName`)
+* **taxonomic_status_key** The key for the taxonomic status field (defaults to `taxonomicStatus`)
+* **nomenclatural_status_key** The key for the nomenclatural status field (defaults to `nomenclaturalStatus`)
+* **taxon_remarks_key** The key for taxon remarks (defaults to `taxonRemarks`)
+
+This transform always produces a list of rejected names.
+
+The replacement name and taxon remarks can include groups from the matched
+pattern, using python expand rules. 
+For example, if a pattern is `(.+) \(.*misapplied.*\)` and the name
+is `Acacia dealbata (misapplied to Acacia leucolobia)` Then the pattern `\1` will
+result in `Acacia dealbata` and `Rewritten from \g<0> in source` will result in 
+`Rewritten from Acacia dealbata (misapplied to Acacia leucolobia) in source`
+
 ## Predicates
 
 Predicates are nodes that can be used as a filter predicate in other nodes.
@@ -664,7 +794,7 @@ Select a node to run, based on the data in a record.
 The node that is being run is run in sub-context with defaults given by the data
 in the input.
 
-`processing.orchestrate.Selector(id, id, input, selector_key, directory_key, input_dir_key, output_dir_key, config_dir_key, work_dir_key, node1, node2, ...)`
+`processing.orchestrate.Selector(id, id, input, selector_key, directory_key, input_dir_key, output_dir_key, config_dir_key, work_dir_key, default_id, node1, node2, ...)`
 
 * **input**: Port An input data source
 * **selector_key** The column of the input which gives the id of the node to run
@@ -682,8 +812,17 @@ in the input.
 * **work_dir_key** The column of the input which gives the work subdirectory to use. 
   If None then there is no key.
   If the data contains None, then the directory key is used.
+* **default_id** The id of the row in the input that contains default configuration values, inherited by other input rows
 * **node***n* The nodes to select.
   These nodes are keyed by id.
+
+### [Null Node](processing/node.py)
+
+A node that does nothing.
+Useful for acting as a placeholder when building conditional
+sequences of nodes.
+
+`processing.node.NullNode(id)`
 
 # Creating a Schema
 

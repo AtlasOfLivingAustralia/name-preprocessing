@@ -1,0 +1,324 @@
+name,area,landArea
+Pacific Ocean,60060700,0
+Atlantic Ocean,29637900,0
+Indian Ocean,26469500,0
+Southern Ocean,7848300,0
+Arctic Ocean,5427000,0
+Philippine Sea,5695000,0
+Coral Sea,4791000,0
+American Mediterranean Sea,4200000,0
+Arabian Sea,3862000,0
+Sargasso Sea,3500000,0
+South China Sea,3500000,0
+Weddell Sea,2800000,0
+Caribbean Sea,2754000,0
+Mediterranean Sea,2510000,0
+Gulf of Guinea,2350000,0
+Tasman Sea,2300000,0
+Bay of Bengal,2172000,0
+Bering Sea,2200000,0
+Sea of Okhotsk,1583000,0
+Gulf of Mexico,1550000,0
+Gulf of Alaska,1533000,0
+Barents Sea,1400000,0
+Norwegian Sea,1383000,0
+East China Sea,1249000,0
+Hudson Bay,1230000,0
+Greenland Sea,1205000,0
+Somov Sea,1150000,0
+Mar de Grau,1140000,0
+Riiser-Larsen Sea,1138000,0
+East Sea,1050000,0
+Argentine Sea,1100000,0
+East Siberian Sea,987000,0
+Lazarev Sea,929000,0
+Kara Sea,926000,0
+Scotia Sea,900000,0
+Labrador Sea,841000,0
+Andaman Sea,797700,0
+Laccadive Sea,786000,0
+Irminger Sea,780000,0
+Solomon Sea,720000,0
+Mozambique Channel,700000,0
+Cosmonauts Sea,699000,0
+Banda Sea,695000,0
+Baffin Bay,689000,0
+Laptev Sea,662000,0
+Arafura Sea,650000,0
+Ross Sea,637000,0
+Chukchi Sea,620000,0
+Timor Sea,610000,0
+North Sea,575000,0
+Bellingshausen Sea,487000,0
+Beaufort Sea,476000,0
+Red Sea,438000,0
+Black Sea,436000,0
+Gulf of Aden,410000,0
+Yellow Sea,380000,0
+Baltic Sea,377000,0
+Caspian Sea,371000,0
+Libyan Sea,350000,0
+Mawson Sea,333000,0
+Levantine Sea,320000,0
+Java Sea,320000,0
+Gulf of Thailand,320000,0
+Celtic Sea,300000,0
+Gulf of Carpentaria,300000,0
+Celebes Sea,280000,0
+Tyrrhenian Sea,275000,0
+Sulu Sea,260000,0
+Cooperation Sea,258000,0
+Persian Gulf,251000,0
+Flores Sea,240000,0
+Gulf of Saint Lawrence,226000,0
+Bay of Biscay,223000,0
+Aegean Sea,214000,0
+Gulf of Anadyr,200000,0
+Molucca Sea,200000,0
+Oman Sea,181000,0
+Ionian Sea,169000,0
+Gulf of California,160000,0
+Balearic Sea,150000,0
+Adriatic Sea,138000,0
+Asia,31033131,31033131
+Africa,29648481,29648481
+Europe,22134900,22134904	
+North and Central America,21330000,21330000
+South America,17461112,17461112
+Oceania,8486460,8486460
+Antarctica,13720000,13720000
+Russia,17098242,16376870
+Canada,9984670,9093510
+China,9706961,9388211
+United States,9372610,9147420
+Brazil,8515767,8358140
+Australia,7692024,7682300
+India,3287590,2973190
+Argentina,2780400,2736690
+Kazakhstan,2724900,2699700
+Algeria,2381741,2381740
+DR Congo,2344858,2267050
+Greenland,2166086,410450
+Saudi Arabia,2149690,2149690
+Mexico,1964375,1943950
+Indonesia,1904569,1811570
+Sudan,1886068,1765048
+Libya,1759540,1759540
+Iran,1648195,1628550
+Mongolia,1564110,1553560
+Peru,1285216,1280000
+Chad,1284000,1259200
+Niger,1267000,1266700
+Angola,1246700,1246700
+Mali,1240192,1220190
+South Africa,1221037,1213090
+Colombia,1141748,1109500
+Ethiopia,1104300,1000000
+Bolivia,1098581,1083300
+Mauritania,1030700,1030700
+Egypt,1002450,995450
+Tanzania,945087,885800
+Nigeria,923768,910770
+Venezuela,916445,882050
+Pakistan,881912,770880
+Namibia,825615,823290
+Mozambique,801590,786380
+Turkey,783562,769630
+Chile,756102,743532
+Zambia,752612,743390
+Myanmar,676578,653290
+Afghanistan,652230,652860
+Somalia,637657,627340
+Central African Republic,622984,622980
+South Sudan,619745,610952
+Ukraine,603500,579320
+Madagascar,587041,581795
+Botswana,582000,566730
+Kenya,580367,569140
+France,551695,547557
+Yemen,527968,527970
+Thailand,513120,510890
+Spain,505992,498800
+Turkmenistan,488100,469930
+Cameroon,475442,472710
+Papua New Guinea,462840,452860
+Sweden,450295,410340
+Uzbekistan,447400,425400
+Morocco,446550,446300
+Iraq,438317,434320
+Paraguay,406752,397300
+Zimbabwe,390757,386850
+Japan,377930,364555
+Germany,357114,348560
+Philippines,342353,298170
+Congo,342000,341500
+Finland,338424,303890
+Vietnam,331212,310070
+Malaysia,330803,328550
+Norway,323802,365268
+Côte d'Ivoire,322463,318000
+Poland,312679,306230
+Oman,309500,309500
+Italy,301336,294140
+Ecuador,276841,248360
+Burkina Faso,272967,273600
+New Zealand,270467,263310
+Gabon,267668,257670
+Western Sahara,266000,266000
+Guinea,245857,245720
+United Kingdom,242900,241930
+Uganda,241550,199810
+Ghana,238533,227540
+Romania,238391,230170
+Laos,236800,230800
+Guyana,214969,196850
+Belarus,207600,202910
+Kyrgyzstan,199951,191800
+Senegal,196722,192530
+Syria,185180,183630
+Cambodia,181035,176520
+Uruguay,181034,175020
+Suriname,163820,156000
+Tunisia,163610,155360
+Bangladesh,147570,130170
+Nepal,147181,143350
+Tajikistan,143100,139960
+Greece,131990,128900
+Nicaragua,130373,120340
+North Korea,120538,120410
+Malawi,118484,94280
+Eritrea,117600,101000
+Benin,112622,112760
+Honduras,112492,111890
+Liberia,111369,96320
+Bulgaria,110879,108560
+Cuba,109884,106440
+Guatemala,108889,107160
+Iceland,103000,100250
+South Korea,100210,97230
+Hungary,93028,90530
+Portugal,92090,91590
+Jordan,89342,88780
+Serbia,88361,87460
+Azerbaijan,86600,82658
+Austria,83871,82409
+United Arab Emirates,83600,83600
+French Guiana,83534,82200
+Czechia,78865,77240
+Panama,75417,74340
+Sierra Leone,71740,72180
+Ireland,70273,68890
+Georgia,69700,69490
+Sri Lanka,65610,62710
+Lithuania,65300,62674
+Latvia,64559,62200
+Togo,56785,54390
+Croatia,56594,55960
+Bosnia and Herzegovina,51209,51000
+Costa Rica,51100,51060
+Slovakia,49037,48088
+Dominican Republic,48671,48320
+Estonia,45227,42390
+Denmark,43094,42430
+Netherlands,41850,33720
+Switzerland,41284,39516
+Bhutan,38394,38117
+Taiwan,36193,35410
+Guinea-Bissau,36125,28120
+Moldova,33846,32850
+Belgium,30528,30280
+Lesotho,30355,30360
+Armenia,29743,28470
+Solomon Islands,28896,27990
+Albania,28748,27400
+Equatorial Guinea,28051,28050
+Burundi,27834,25680
+Haiti,27750,27560
+Rwanda,26338,24670
+Republic of North Macedonia,25713,25220
+Djibouti,23200,23180
+Belize,22966,22810
+El Salvador,21041,20720
+Israel,20770,21640
+Slovenia,20273,20140
+New Caledonia,18575,18280
+Fiji,18272,18270
+Kuwait,17818,17820
+Eswatini,17364,17200
+Timor-Leste,14874,14870
+Bahamas,13943,10010
+Montenegro,13812,13450
+Vanuatu,12189,12190
+Falkland Islands,12173,12170
+Qatar,11586,11610
+Jamaica,10991,10830
+Gambia,10689,10120
+Lebanon,10452,10230
+Cyprus,9251,9240
+Puerto Rico,8870,8870
+State of Palestine,6220,6020
+Brunei Darussalam,5765,5270
+Trinidad and Tobago,5130,5130
+French Polynesia,4167,3660
+Cabo Verde,4033,4030
+Samoa,2842,2830
+Luxembourg,2586,2590
+Réunion,2511,2500
+Mauritius,2040,2030
+Comoros,1862,1861
+Guadeloupe,1628,1690
+Faeroe Islands,1393,1396
+Martinique,1128,1060
+China Hong Kong SAR,1104,1050
+Sao Tome and Principe,964,960
+Turks and Caicos Islands,948,950
+Kiribati,811,810
+Bahrain,765,760
+Dominica,751,750
+Tonga,747,720
+Singapore,710,700
+Micronesia,702,700
+Saint Lucia,616,610
+Isle of Man,572,570
+Guam,549,540
+Andorra,468,470
+Northern Mariana Islands,464,460
+Palau,459,460
+Seychelles,452,460
+Curaçao,444,444
+Antigua and Barbuda,442,440
+Barbados,430,430
+Saint Helena,394,390
+Saint Vincent and the Grenadines,389,390
+Mayotte,374,375
+United States Virgin Islands,347,350
+Grenada,344,340
+Caribbean Netherlands,328,328
+Malta,316,320
+Maldives,300,300
+Cayman Islands,264,240
+Saint Kitts and Nevis,261,260
+Niue,260,260
+Saint Pierre and Miquelon,242,230
+Cook Islands,236,240
+American Samoa,199,200
+Marshall Islands,181,180
+Aruba,180,180
+Liechtenstein,160,160
+British Virgin Islands,151,150
+Wallis and Futuna Islands,142,140
+Montserrat,102,100
+Anguilla,91,90
+San Marino,61,60
+Bermuda,54,50
+Saint Martin,53,53
+Sint Maarten,34,34
+China Macao SAR,30,30
+Tuvalu,26,30
+Saint Barthélemy,21,21
+Nauru,21,20
+Tokelau,12,10
+Gibraltar,6,10
+Monaco,2,1
+Holy See,0,0
+Channel Islands,190,190

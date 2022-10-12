@@ -1,13 +1,28 @@
 locationID,locality,country
-AUS,Australia,Australia
-TDWG:MAQ-OO,Macquarie Island,Australia
-TDWG:NFK-LH,Lord Howe Island,Australia
-TDWG:NFK-NI,Norfolk Island,Australia
-TDWG:NSW-CT,Australian Capital Territory,Australia
-TDWG:NSW-NS,New South Wales,Australia
-TDWG:NTA-OO,Northern Territory,Australia
-TDWG:QLD-QU,Queensland,Australia
-TDWG:SOA-OO,South Australia,Australia
-TDWG:TAS-OO,Tasmania,Australia
-TDWG:VIC-OO,Victoria,Australia
-TDWG:WAU-WA,Western Australia,Australia
+mrgid:1922,Oceania,
+AU,Australia,Australia
+mrgid:2147,Australia,Australia
+NZ,New Zealand,New Zealand
+mrgid:2227,New Zealand,New Zealand
+tdwg:MAQ-OO,Macquarie Island,Australia
+mrgid:8592,Macquarie Island,Australia
+tdwg:NFK-LH,Lord Howe Island,Australia
+mrgid:19731,Lord Howe Island,Australia
+tdwg:NFK-NI,Norfolk Island,Australia
+mrgid:9390,Norfolk Island,Australia
+tdwg:NSW-CT,Australian Capital Territory,Australia
+mrgid:19281,Australian Capital Territory,Australia
+tdwg:NSW-NS,New South Wales,Australia
+mrgid:8944,New South Wales,Australia
+tdwg:NTA-OO,Northern Territory,Australia
+mrgid:17559O,Northern Territory,Australia
+tdwg:QLD-QU,Queensland,Australia
+mrgid:8966,Queensland,Australia
+tdwg:SOA-OO,South Australia,Australia
+mrgid:8913,South Australia,Australia
+tdwg:TAS-OO,Tasmania,Australia
+mrgid:8891,Tasmania,Australia
+tdwg:VIC-OO,Victoria,Australia
+mrgid:9092,Victoria,Australia
+tdwg:WAU-WA,Western Australia,Australia
+mrgid:8914,Western Australia,Australia

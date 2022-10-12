@@ -13,8 +13,8 @@
 
 from ala.transform import SpeciesListSource, CollectorySource, PublisherSource, VernacularListSource
 from dwc.meta import MetaFile, EmlFile
-from dwc.schema import NomenclaturalCodeMapSchema, VernacularNameSchema, TaxonSchema, VernacularSchema
-from dwc.transform import DwcTaxonValidate, DwcSyntheticNames
+from dwc.schema import NomenclaturalCodeMapSchema, VernacularNameSchema, TaxonSchema, VernacularSchema, NameMapSchema
+from dwc.transform import DwcTaxonValidate, DwcSyntheticNames, DwcRename
 from github.transform import GithubListSource
 from processing.orchestrate import Orchestrator
 from processing.sink import CsvSink
@@ -28,13 +28,16 @@ def reader() -> Orchestrator:
     species_metadata = CollectorySource.create('collectory_source')
     species_defaults = MapTransform.create('species_defaults', species_list.output, species_list.output.schema, {
         'datasetID': MapTransform.orDefault(MapTransform.choose('datasetID'), 'datasetID'),
-        'taxonomicStatus': MapTransform.orDefault(MapTransform.choose('taxonomicStatus'), 'defaultAcceptedStatus')
+        'taxonomicStatus': MapTransform.orDefault(MapTransform.choose('taxonomicStatus'), 'defaultAcceptedStatus'),
+        'source': MapTransform.choose('scientificNameLink')
     }, auto=True)
     taxon_list = ProjectTransform.create("taxon_list", species_defaults.output, TaxonSchema())
+    name_map = CsvSource.create('name_map', 'Name_Map.csv', 'ala', NameMapSchema())
+    dwc_renamed = DwcRename.create('rename', taxon_list.output, name_map.output)
     nomenclatural_code_map = CsvSource.create('nomenclatural_code_map', 'Nomenclatural_Code_Map.csv', 'ala', NomenclaturalCodeMapSchema())
-    default_codes = LookupTransform.create('default_nomenclatural_codes', taxon_list.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', overwrite=True)
-    dwc_base = DwcTaxonValidate.create("species_validate", default_codes.output)
-    dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_base.output)
+    default_codes = LookupTransform.create('default_nomenclatural_codes', dwc_renamed.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', overwrite=True)
+    dwc_base = DwcTaxonValidate.create("species_validate", default_codes.output, check_names=True, no_errors=True)
+    dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_base.output, fail_on_exception=True)
     dwc_taxon_output = CsvSink.create("dwc_taxon", dwc_taxon.output, "taxon.csv", "excel", reduce=True)
     vernacular_list = FilterTransform.create("vernacular_list", species_defaults.output, lambda r: r.vernacularName is not None and r.vernacularName != '-')
     dwc_vernacular = MapTransform.create("dwc_vernacular", vernacular_list.output, VernacularSchema(), {
@@ -42,7 +45,7 @@ def reader() -> Orchestrator:
         'datasetID': MapTransform.orDefault(MapTransform.choose('datasetID'), 'datasetID'),
         'status': MapTransform.orDefault(MapTransform.choose('status'), 'defaultVernacularStatus')
     }, auto = True)
-    dwc_vernacular_denormalised = DenormaliseTransform.create("dwc_veractual_denormalised", dwc_vernacular.output, 'vernacularName', ',')
+    dwc_vernacular_denormalised = DenormaliseTransform.create("dwc_vernacular_denormalised", dwc_vernacular.output, 'vernacularName', ',')
     dwc_vernacular_identified = MapTransform.create("dwc_vernacular_identifier", dwc_vernacular_denormalised.output, VernacularSchema(), {
         'nameID': MapTransform.uuid()
     }, auto = True)
@@ -57,6 +60,8 @@ def reader() -> Orchestrator:
                                     species_metadata,
                                     species_defaults,
                                     taxon_list,
+                                    name_map,
+                                    dwc_renamed,
                                     nomenclatural_code_map,
                                     default_codes,
                                     dwc_base,

@@ -1,4 +1,4 @@
-<metadata code="AFD" date="2018-10-03">
+<metadata code="AFD" date="2022-09-05">
   <title>Australian Faunal Directory</title>
   <organization>
     <organizationName>Australian Faunal Directory</organizationName>
@@ -16,5 +16,5 @@
       <taxonRankValue>Animalia</taxonRankValue>
     </taxonomicClassification>
   </taxonomicCoverage>
-  <citation>Atlas of Living Australia &amp; ABRS 2009. Australian Faunal Directory. Australian Biological Resources Study, Canberra.</citation>
+  <citation>Atlas of Living Australia &amp; ABRS 2022. Australian Faunal Directory. Australian Biological Resources Study, Canberra.</citation>
 </metadata>

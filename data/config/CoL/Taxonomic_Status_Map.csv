@@ -1,6 +1,7 @@
 Term,DwC,Accepted,Synonym,Misapplied
 accepted name,accepted,true,false,false
-provisionally accepted name,incertaeSedis,true,false,false
+provisionally accepted,accepted,true,false,false
+provisionally accepted name,accepted,true,false,false
 synonym,synonym,false,true,false
 ambiguous synonym,proParteSynonym,false,true,false
 misapplied name,misapplied,false,false,true

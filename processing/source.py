@@ -11,18 +11,20 @@
 #   implied. See the License for the specific language governing
 #   rights and limitations under the License.
 
+import sys
 import csv
 from os import path
 from typing import Dict, Callable
 
 import attr
 import marshmallow
-import xlrd
+import openpyxl
 
 from processing.dataset import Port, Dataset, Record
 from processing.node import Node, ProcessingContext
 from processing.transform import Predicate
 
+csv.field_size_limit(sys.maxsize)
 
 @attr.s
 class Source(Node):
@@ -54,6 +56,7 @@ class CsvSource(Source):
     file: path
     dialect: str
     encoding: str = attr.ib(default='utf-8', kw_only=True)
+    comment: str = attr.ib(default='#', kw_only=True)
 
     @classmethod
     def create(cls, id: str, file: path, dialect: str, schema: marshmallow.Schema, **kwargs):
@@ -61,19 +64,25 @@ class CsvSource(Source):
         error = Port.error_port(schema)
         return CsvSource(id, source, error, file, dialect, **kwargs)
 
+    def decomment(self, fp):
+        for row in fp:
+            if self.comment is not None and row.startswith(self.comment):
+                continue
+            if row:
+                yield row
+
     def execute(self, context: ProcessingContext):
          dataset = Dataset.for_port(self.output)
          errors = Dataset.for_port(self.error)
          with open(context.locate_input_file(self.file), "r", encoding=self.encoding) as ifile:
-            reader = csv.DictReader(ifile, dialect=self.dialect)
+            reader = csv.DictReader(self.decomment(ifile), dialect=self.dialect)
             line = 1
             for row in reader:
                 try:
-                    if len(row) > 0:
-                        value = Record(line, self.output.schema.load(row), None)
-                        if self.predicate is None or self.predicate(value):
-                            dataset.add(value)
-                            self.count(self.ACCEPTED_COUNT, value, context)
+                    value = Record(line, self.output.schema.load(row), None)
+                    if self.predicate is None or self.predicate(value):
+                        dataset.add(value)
+                        self.count(self.ACCEPTED_COUNT, value, context)
                 except marshmallow.ValidationError as err:
                     err.data['_line'] = line
                     err.data['_messages'] = err.messages
@@ -99,23 +108,30 @@ class ExcelSource(Source):
     def execute(self, context: ProcessingContext):
         dataset = Dataset.for_port(self.output)
         errors = Dataset.for_port(self.error)
-        wb = xlrd.open_workbook(context.locate_input_file(self.file))
-        sheet = wb.sheet_by_name(self.sheet) if self.sheet is not None else wb.sheet_by_index(0)
-        ncols = sheet.ncols
-        columns = [ sheet.cell_value(0, i) for i in range(ncols)]
-        for line in range(1, sheet.nrows):
-            row = { columns[j]: sheet.cell_value(line, j) for j in range(ncols) }
-            try:
-                value = Record(line, self.output.schema.load(row), None)
-                if self.predicate is None or self.predicate(value):
-                    dataset.add(value)
-                    self.count(self.ACCEPTED_COUNT, value, context)
-            except marshmallow.ValidationError as err:
-                err.data['_line'] = line
-                err.data['_messages'] = err.messages
-                error = Record(line, err.data, err.messages)
-                errors.add(error)
-                self.count(self.ERROR_COUNT, error, context)
-            self.count(self.PROCESSED_COUNT, value, context)
+        wb = openpyxl.load_workbook(context.locate_input_file(self.file), read_only=False, keep_vba=False, data_only=True, keep_links=False)
+        sheetname = self.sheet if self.sheet else wb.get_sheet_names()[0]
+        sheet = wb[sheetname]
+        rows = sheet.values
+        columns = next(rows)
+        line = 0
+        try:
+            while True:
+                row = next(rows)
+                row = { columns[j]: (row[j] if row[j] else '') for j in range(len(row)) }
+                try:
+                    value = Record(line, self.output.schema.load(row), None)
+                    if self.predicate is None or self.predicate(value):
+                        dataset.add(value)
+                        self.count(self.ACCEPTED_COUNT, value, context)
+                except marshmallow.ValidationError as err:
+                    err.data['_line'] = line
+                    err.data['_messages'] = err.messages
+                    error = Record(line, err.data, err.messages)
+                    errors.add(error)
+                    self.count(self.ERROR_COUNT, error, context)
+                line += 1
+                self.count(self.PROCESSED_COUNT, row, context)
+        except StopIteration:
+            pass
         context.save(self.output, dataset)
         context.save(self.error, errors)
