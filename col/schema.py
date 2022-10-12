@@ -13,7 +13,7 @@
 
 import csv
 
-from marshmallow import Schema
+from marshmallow import Schema, post_load
 
 import processing.fields as fields
 
@@ -29,65 +29,83 @@ class col_dialect(csv.Dialect):
     strict = True
 csv.register_dialect("col", col_dialect)
 
+_MAX_REFERENCE = 1024
+
 class ColTaxonSchema(Schema):
-    taxonID = fields.String()
-    identifier = fields.String(missing=None)
-    datasetID = fields.String(missing=None)
-    datasetName = fields.String(missing=None)
-    acceptedNameUsageID = fields.String(missing=None)
-    parentNameUsageID = fields.String(missing=None)
-    taxonomicStatus = fields.String(missing=None)
-    taxonRank = fields.String(missing=None)
-    verbatimTaxonRank = fields.String(missing=None)
-    scientificName = fields.String()
-    kingdom = fields.String(missing=None)
-    phylum = fields.String(missing=None)
-    class_ = fields.String(missing=None, data_key="class")
-    order = fields.String(missing=None)
-    superfamily = fields.String(missing=None)
-    family = fields.String(missing=None)
-    genericName = fields.String(missing=None)
-    genus = fields.String(missing=None)
-    subgenus = fields.String(missing=None)
-    specificEpithet = fields.String(missing=None)
-    infraspecificEpithet = fields.String(missing=None)
-    scientificNameAuthorship = fields.String(missing=None)
-    source = fields.String(missing=None)
-    namePublishedIn = fields.String(missing=None)
-    nameAccordingTo = fields.String(missing=None)
-    modified = fields.String(missing=None)
-    description = fields.String(missing=None)
-    taxonConceptID = fields.String(missing=None)
-    scientificNameID = fields.String(missing=None)
-    references = fields.String(missing=None)
-    isExtinct = fields.Boolean(missing=None)
+    taxonID = fields.String(data_key = 'dwc:taxonID')
+    acceptedNameUsageID = fields.String(missing=None, data_key = 'dwc:acceptedNameUsageID')
+    parentNameUsageID = fields.String(missing=None, data_key = 'dwc:parentNameUsageID')
+    originalNameUsageID = fields.String(missing=None, data_key = 'dwc:originalNameUsageID')
+    scientificNameID = fields.String(missing=None, data_key = 'dwc:scientificNameID')
+    datasetID = fields.String(missing=None, data_key = 'dwc:datasetID')
+    taxonomicStatus = fields.String(missing=None, data_key = 'dwc:taxonomicStatus')
+    taxonRank = fields.String(missing=None, data_key = 'dwc:taxonRank')
+    scientificName = fields.String(data_key = 'dwc:scientificName')
+    scientificNameAuthorship = fields.String(missing=None, data_key = 'dwc:scientificNameAuthorship')
+    notho = fields.String(missing=None, data_key = 'col:notho')
+    genericName = fields.String(missing=None, data_key = 'dwc:genericName')
+    infragenericEpithet = fields.String(missing=None, data_key = 'dwc:infragenericEpithet')
+    specificEpithet = fields.String(missing=None, data_key = 'dwc:specificEpithet')
+    infraspecificEpithet = fields.String(missing=None, data_key = 'dwc:infraspecificEpithet')
+    cultivarEpithet = fields.String(missing=None, data_key = 'dwc:cultivarEpithet')
+    nameAccordingTo = fields.String(missing=None, data_key = 'dwc:nameAccordingTo')
+    namePublishedIn = fields.String(missing=None, data_key = 'dwc:namePublishedIn')
+    nomeclaturalCode = fields.String(missing=None, data_key = 'dwc:nomenclaturalCode')
+    nomenclaturalStatus = fields.String(missing=None, data_key = 'dwc:nomenclaturalStatus')
+    taxonRemarks = fields.String(missing=None, data_key = 'dwc:taxonRemarks')
+    references = fields.String(missing=None, data_key = 'dcterms:references')
 
     class Meta:
         ordered = True
 
+    def drop_long(self, value):
+        if value is not None and len(value) > _MAX_REFERENCE:
+            return None
+        return value
+
+    # Prevent ludicrously long references
+    @post_load
+    def handle_long_references(self, data, **kwargs):
+        data['namePublishedIn'] = self.drop_long(data['namePublishedIn'])
+        data['nameAccordingTo'] = self.drop_long(data['nameAccordingTo'])
+        data['references'] = self.drop_long(data['references'])
+        return data
+
+class ColTaxonWithClassificationSchema(ColTaxonSchema):
+    kingdom = fields.String(missing=None)
+    phylum = fields.String(missing=None)
+    subphylum = fields.String(missing=None)
+    class_ = fields.String(missing=None, data_key='class')
+    subclass = fields.String(missing=None)
+    order = fields.String(missing=None)
+    suborder = fields.String(missing=None)
+    infraorder = fields.String(missing=None)
+    family = fields.String(missing=None)
+    genus = fields.String(missing=None)
+    subgenus = fields.String(missing=None)
+
 class ColDistributionSchema(Schema):
-    taxonID = fields.String()
-    locationID = fields.String(missing=None)
-    locality = fields.String(missing=None)
-    occurrenceStatus = fields.String(missing=None)
-    establishmentMeans = fields.String(missing=None)
+    taxonID = fields.String(data_key = 'dwc:taxonID')
+    occurrenceStatus = fields.String(missing=None, data_key = 'dwc:occurrenceStatus')
+    locationID = fields.String(missing=None, data_key = 'dwc:locationID')
+    locality = fields.String(missing=None, data_key = 'dwc:locality')
+    countryCode = fields.String(missing=None, data_key = 'dwc:countryCode')
+    source = fields.String(missing=None, data_key = 'dcterms:source')
 
     class Meta:
         ordered = True
 
 class ColVernacularSchema(Schema):
-    taxonID = fields.String()
-    vernacularName = fields.String(missing=None)
-    language = fields.String(missing=None)
-    countryCode = fields.String(missing=None)
-    locality = fields.String(missing=None)
-    transliteration = fields.String(missing=None)
+    taxonID = fields.String(data_key = 'dwc:taxonID')
+    language = fields.String(missing=None, data_key = 'dcterms:language')
+    vernacularName = fields.String(missing=None, data_key = 'dwc:vernacularName')
 
     class Meta:
         ordered = True
 
 class ColAcceptedKingdomSchema(Schema):
     kingdom = fields.String()
+    taxonID = fields.String()
     useDistribution = fields.Boolean()
     useDataset = fields.Boolean()
 

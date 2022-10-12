@@ -49,6 +49,8 @@ class SourceSchema(Schema):
     defaultSynonymStatus = fields.String(missing=None)
     defaultLocationID = fields.String(missing=None)
     applyLocationToTaxonomicStatus = fields.String(missing=None)
+    countryCode = fields.String(missing=None)
+    language = fields.String(missing=None)
 
 parser = argparse.ArgumentParser(description='Import natureshare data and convert into a DwC file')
 parser.add_argument('-d', '--directory', type=str, help='Base directory', default='.')
@@ -77,9 +79,9 @@ if args.only is None:
     source_filter = lambda r: True
 else:
     only_ids = set(map(lambda id: id.strip(), args.only.split(',')))
-    source_filter = lambda r: r.id in only_ids
+    source_filter = lambda r: r.id in only_ids or r.id == 'default'
 
-sources = CsvSource.create("sources", source_file, "ala", SourceSchema(), predicate=source_filter)
+sources = CsvSource.create("sources", source_file, "ala", SourceSchema(), predicate=source_filter, fail_on_exception=True)
 dummy = NullSink.create("dummy")
 selector = Selector.create(
     "selector",
@@ -90,6 +92,7 @@ selector = Selector.create(
     None,
     'configDir',
     None,
+    'default',
     afd.read.reader(),
     ala.read.reader(),
     ala.read.vernacular_reader(),
@@ -105,15 +108,7 @@ selector = Selector.create(
 )
 
 orchestator = Orchestrator('all', [sources, selector])
-defaults = {
-    'language': 'en',
-    'countryCode': 'AU',
-    'status': 'common',
-    'isPreferredName': False,
-    'locationID': 'AUS',
-    'defaultLocationID': 'http://vocab.getty.edu/tgn/7000490',
-    'applyLocationToTaxonomicStatus': 'misapplied|excluded|inferredMisapplied|inferredExcluded|miscellaneousLiterature'
-}
+defaults = { }
 
 context = ProcessingContext.create('all', dangling_sink_class=CsvSink, config_dirs=config_dirs, input_dir=input_dir, work_dir=work_dir, output_dir=output_dir, log_level=log_level, clear_work_dir=clear, defaults=defaults, dump=dump)
 orchestator.run(context)

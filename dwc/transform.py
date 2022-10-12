@@ -16,7 +16,7 @@ from typing import Callable, Dict, List, Tuple
 
 import attr
 
-from dwc.schema import MappingSchema, IdentifierSchema, DistributionSchema
+from dwc.schema import MappingSchema, IdentifierSchema, DistributionSchema, ClassificationSchema
 from processing.dataset import Port, Keys, Index, Dataset, Record, IndexType
 from processing.node import ProcessingContext
 from processing.transform import ThroughTransform, Transform
@@ -270,20 +270,28 @@ class DwcTaxonParent(ThroughTransform):
     accepted_keys: Keys = attr.ib()
     name_keys: Keys = attr.ib()
     rank_keys = attr.ib()
+    kingdoms: Port = attr.ib()
+    kingdom_keys: Keys = attr.ib()
 
     @classmethod
     def create(cls, id: str,  input: Port, identifier_keys, parent_keys, accepted_keys, name_keys, rank_keys, **kwargs):
-        output = Port.port(input.schema)
+        output = Port.merged(input.schema, ClassificationSchema())
         identifier_keys = Keys.make_keys(input.schema, identifier_keys)
         parent_keys = Keys.make_keys(input.schema, parent_keys)
         accepted_keys = Keys.make_keys(input.schema, accepted_keys)
         name_keys = Keys.make_keys(input.schema, name_keys)
         rank_keys = Keys.make_keys(input.schema, rank_keys)
-        return DwcTaxonParent(id, input, output, None, identifier_keys, parent_keys, accepted_keys, name_keys, rank_keys, **kwargs)
+        kingdoms = kwargs.pop('kingdoms', None)
+        kingdom_keys = None
+        if kingdoms is not None:
+            kingdom_keys = kwargs.pop('kingdom_keys', 'kingdom')
+            kingdom_keys = Keys.make_keys(kingdoms.schema, kingdom_keys)
+        return DwcTaxonParent(id, input, output, None, identifier_keys, parent_keys, accepted_keys, name_keys, rank_keys, kingdoms, kingdom_keys, **kwargs)
 
     def execute(self, context: ProcessingContext):
         data = context.acquire(self.input)
         index = Index.create(data, self.identifier_keys, IndexType.FIRST)
+        kingdom_index = Index.create(context.acquire(self.kingdoms), self.kingdom_keys, IndexType.FIRST) if self.kingdoms else None
         result = Dataset.for_port(self.output)
         errors = Dataset.for_port(self.error)
         map_lookup = dict() # Use a lookup table because the identifier function may be stateful
@@ -298,7 +306,7 @@ class DwcTaxonParent(ThroughTransform):
                         record = accepted
                     rank = self.rank_keys.get(record)
                     name = self.name_keys.get(record)
-                    if rank == 'kingdom' and composed.kingdom is None:
+                    if composed.kingdom is None and ((kingdom_index is None and rank == 'kingdom') or (kingdom_index is not None and kingdom_index.findByKey(name) is not None)):
                         composed.data['kingdom'] = name
                     elif rank == 'phylum' and composed.phylum is None:
                         composed.data['phylum'] = name
@@ -318,6 +326,10 @@ class DwcTaxonParent(ThroughTransform):
                         composed.data['family'] = name
                     elif rank == 'family' and composed.family is None:
                         composed.data['family'] = name
+                    elif rank == 'genus' and composed.genus is None:
+                        composed.data['genus'] = name
+                    elif rank == 'subgenus' and composed.subgenus is None:
+                        composed.data['subgenus'] = name
                     record = index.find(record, self.parent_keys)
                 result.add(composed)
                 self.count(self.ACCEPTED_COUNT, record, context)
@@ -902,7 +914,7 @@ class DwcVernacularStatus(ThroughTransform):
 
 @attr.s
 class DwcDefaultDistribution(ThroughTransform):
-    """Create default distribution entries for """
+    """Create default distribution entries for taxonomic entries"""
     CLEANED_COUNT = 'cleaned'
 
     distribution: Port = attr.ib()

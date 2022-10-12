@@ -71,7 +71,7 @@ def clean_rank(s: str):
     return s
 
 def reader() -> Orchestrator:
-    taxon_file = "caab_species.xls"
+    taxon_file = "caab_species.xlsx"
     nomenclatural_code_file = "Nomenclatural_Code_Map.csv"
     scientific_name_status_file = "Scientific_Name_Patterns.csv"
     caab_schema = CaabSchema()
@@ -102,8 +102,7 @@ def reader() -> Orchestrator:
         'SUBSPECIES': (lambda r: clean_scientific(r.SUBSPECIES)),
         'SUBGENUS': (lambda r: clean_scientific(r.SUBGENUS)),
         'VARIETY': (lambda r: clean_scientific(r.VARIETY)),
-        'RANK': (lambda r: clean_rank(r.RANK)),
-        'TAXON_WWW_NOTES': (lambda r: strip_markup(r.TAXON_WWW_NOTES)),
+        'RANK': (lambda r: clean_rank(r.RANK))
     }, auto=True)
     taxon_coded = LookupTransform.create('taxon_coded', taxon_clean.output, nomenclatural_code_map.output, 'KINGDOM', 'kingdom', record_unmatched=True)
     synonyms = DenormaliseTransform.create("synonyms", taxon_coded.output, 'RECENT_SYNONYMS', '|', include_empty=False)

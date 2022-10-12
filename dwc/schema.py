@@ -155,7 +155,12 @@ class DistributionSchema(Schema):
     taxonID = fields.String(required=True, metadata={ 'export': True })
     locationID = fields.String(required=True)
     locality = fields.String(required=True)
+    country = fields.String(required=True)
     countryCode = fields.String(missing=None)
+    continent = fields.String(required=True)
+    island = fields.String(required=True)
+    islandGroup = fields.String(required=True)
+    waterBody = fields.String(required=True)
     lifeStage = fields.String(missing=None, vocabulary='http://rs.gbif.org/vocabulary/gbif/life_stage.xml')
     occurrenceStatus = fields.String(missing=None, vocabulary='http://rs.gbif.org/vocabulary/gbif/distribution_status_2020-07-15.xml')
     establishmentMeans = fields.String(missing=None, vocabulary='http://rs.gbif.org/vocabulary/dwc/establishment_means_2022-02-02.xml')
@@ -208,6 +213,7 @@ class EstablishmentMeansMapSchema(Schema):
 class LocationMapSchema(Schema):
     locationID = fields.String()
     locality = fields.String()
+    locationRemarks = fields.String(missing=None)
 
     class Meta:
         ordered = True
@@ -220,6 +226,7 @@ class LocationSchema(Schema):
     """
     locationID = fields.String()
     parentLocationID = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/parentLocationID')
+    acceptedLocationID = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/acceptedLocationID')
     datasetID = fields.String(missing=None)
     geographyType = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/geographyType')
     locality = fields.String()
@@ -227,6 +234,7 @@ class LocationSchema(Schema):
     decimalLatitude = fields.Float(missing=None)
     decimalLongitude = fields.Float(missing=None)
     area = fields.Float(missing=None, uri='http://ala.org.au/terms/1.0/area')
+    locationRemarks = fields.String(missing=None)
 
     class Meta:
         ordered = True
@@ -246,3 +254,23 @@ class ScientificNameStatusSchema(Schema):
     taxonomicStatus = fields.String(missing=None)
     nomenclaturalStatus = fields.String(missing=None)
     taxonRemarks = fields.String(missing=None)
+
+class ClassificationSchema(Schema):
+    kingdom = fields.String(missing=None)
+    phylum = fields.String(missing=None)
+    subphylum = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/subphylum')
+    class_ = fields.String(missing=None, data_key='class', uri='http://rs.tdwg.org/dwc/terms/class')
+    subclass = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/subclass')
+    order = fields.String(missing=None)
+    suborder = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/suborder')
+    infraorder = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/infraorder')
+    family = fields.String(missing=None)
+    genus = fields.String(missing=None)
+    subgenus = fields.String(missing=None)
+    specificEpithet = fields.String(missing=None)
+    infraspecificEpithet = fields.String(missing=None)
+
+    class Meta:
+        ordered = True
+        uri = 'Classification'
+        namespace = 'http://rs.tdwg.org/dwc/terms/'

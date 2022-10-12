@@ -19,6 +19,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 from copy import deepcopy
 from inspect import signature
+from re import Pattern
 from typing import List, Dict, Tuple, Set, Any
 
 import attr
@@ -612,8 +613,8 @@ class MapTransform(ThroughTransform):
         for arg in args:
             if isinstance(arg, str):
                 transform = (1, cls._getter(arg))
-            elif isinstance(arg, callable):
-                sig = signature(transform)
+            elif isinstance(arg, Callable):
+                sig = signature(arg)
                 nargs = len(sig.parameters)
                 transform = (nargs, arg)
             else:
@@ -705,7 +706,7 @@ class MapTransform(ThroughTransform):
             elif isinstance(transform, Callable):
                 converter = transform
             else:
-                raise ValueError("Unable to decode mapping for " + name + " from " + transform)
+                raise ValueError("Unable to decode mapping for " + str(name) + " from " + str(transform))
             result[name] = converter
         return result
 
@@ -980,26 +981,31 @@ class TrailTransform(ThroughTransform):
         accepted_keys = Keys.make_keys(input.schema, accepted_keys) if accepted_keys else None
         return TrailTransform(id, input, output, None, reference, reference_keys, parent_keys, accepted_keys, predicate, **kwargs)
 
-    def trace(self, index: Index, record: Record, seen: Dict[Any, Record], result: Dataset, context: ProcessingContext):
+    def trace(self, index: Index, record: Record, seen: Dict[Any, Record], result: Dataset, context: ProcessingContext, required: bool):
         reference_key = self.reference_keys.get(record)
         if reference_key in seen:
             return seen[reference_key]
         seen[reference_key] = record
         parent = index.find(record, self.parent_keys)
         if parent is not None:
-            parent = self.trace(index, parent, seen, result, context)
+            parent = self.trace(index, parent, seen, result, context, False)
             parent_key = self.reference_keys.get(parent) if parent else None
             self.parent_keys.set(record, parent_key)
-        accepted = index.find(record, self.accepted_keys) if self.accepted_keys else None
-        if accepted is not None:
-            accepted = self.trace(index, accepted, seen, result, context)
-            accepted_key = self.reference_keys.get(accepted) if accepted else None
-            self.accepted_keys.set(record, accepted_key)
+        else:
+            self.parent_keys.set(record, None)
+        if self.accepted_keys:
+            accepted = index.find(record, self.accepted_keys)
+            if accepted is not None:
+                accepted = self.trace(index, accepted, seen, result, context, False)
+                accepted_key = self.reference_keys.get(accepted) if accepted else None
+                self.accepted_keys.set(record, accepted_key)
+            else:
+                self.accepted_keys.set(record, None)
         self.count(self.ACCEPTED_COUNT, record, context)
-        if self.predicate is None or self.predicate.test(record):
+        if required or self.predicate is None or self.predicate.test(record):
             result.add(record)
             return record
-        if self.predicate is None or self.predicate.test(parent):
+        if parent is not None and (self.predicate is None or self.predicate.test(parent)):
             seen[reference_key] = parent
             return parent
         seen[reference_key] = None
@@ -1019,7 +1025,7 @@ class TrailTransform(ThroughTransform):
                     self.count(self.ERROR_COUNT, record, context)
                     errors.add(Record.error(record, "Missing reference entry"))
                 else:
-                    self.trace(index, actual, seen, result, context)
+                    self.trace(index, actual, seen, result, context, True)
             except Exception as err:
                 if self.fail_on_exception:
                     raise err
@@ -1028,3 +1034,309 @@ class TrailTransform(ThroughTransform):
             self.count(self.PROCESSED_COUNT, record, context)
         context.save(self.output, result)
         context.save(self.error, errors)
+
+@attr.s
+class VariantTransform(ThroughTransform):
+    """
+    Construct variants of a field from an input.
+    """
+
+    keys: Keys = attr.ib()
+    transforms: List[Callable] = attr.ib()
+    annotation: Callable = attr.ib(kw_only=True, default=None)
+
+    @classmethod
+    def create(cls, id: str, input: Port, keys, *args, **kwargs):
+        output = Port.port(input.schema)
+        allow_duplicates = kwargs.pop('allow_duplicates', False)
+        reject = None
+        if not allow_duplicates:
+            reject = Port.port(input.schema)
+        keys = Keys.make_keys(input.schema, keys)
+        transforms = list(args)
+        return VariantTransform(id, input, output, reject, keys, transforms)
+
+    def execute(self, context: ProcessingContext):
+        data = context.acquire(self.input)
+        result = Dataset.for_port(self.output)
+        rejected = Dataset.for_port(self.reject) if self.reject else None
+        errors = Dataset.for_port(self.error)
+        additional = self.build_additional(context)
+        seen = set(self.keys.get(r) for r in data.rows) if self.reject else None
+        for record in data.rows:
+            try:
+                self.count(self.PROCESSED_COUNT, record, context)
+                value: str = self.keys.get(record)
+                value = value.strip() if value is not None else None
+                for transform in self.transforms:
+                    sig = signature(transform)
+                    nargs = len(sig.parameters)
+                    if nargs == 0:
+                        variant = transform()
+                    elif nargs == 1:
+                        variant = transform(value)
+                    elif nargs == 2:
+                        variant = transform(value, record)
+                    elif nargs == 3:
+                        variant = transform(value, record, context)
+                    elif nargs == 4:
+                        variant = transform(value, record, context, additional)
+                    else:
+                        raise ProcessingException("Unable to process function with signature " + str(sig))
+                    if variant is not None:
+                        var_record = Record.copy(record)
+                        if self.annotation is not None:
+                            self.annotation(variant, var_record)
+                        self.keys.set(var_record, variant)
+                        if seen is not None and variant in seen:
+                            rejected.add(var_record)
+                            self.count(self.REJECTED_COUNT, var_record, context)
+                        else:
+                            seen.add(variant)
+                            result.add(var_record)
+                            self.count(self.ACCEPTED_COUNT, var_record, context)
+            except Exception as err:
+                if self.fail_on_exception:
+                    raise err
+                errors.add(Record.error(record, err))
+                self.count(self.ERROR_COUNT, record, context)
+        context.save(self.output, result)
+        context.save(self.error, errors)
+        if rejected is not None:
+            context.save(self.reject, rejected)
+
+@attr.s
+class SortTransform(ThroughTransform):
+    """
+    Sort records by some sort of key expression
+    """
+
+    key: Callable = attr.ib()
+
+    @classmethod
+    def create(cls, id: str, input: Port, key):
+        output = Port.port(input.schema)
+        key = cls._build_key(key, input.schema)
+        return SortTransform(id, input, output, None, key)
+
+    @classmethod
+    def _build_key(cls, key, schema: Schema):
+        if isinstance(key, Callable):
+            return key
+        if isinstance(key, str):
+            key = Keys.make_keys(schema, key)
+            return cls._build_natural_comparator(key)
+        raise ValueError(key + " must be a function or a field name")
+
+    @classmethod
+    def _build_natural_comparator(cls, key: Keys):
+         return lambda r: key.get(r)
+
+    def execute(self, context: ProcessingContext):
+        data = context.acquire(self.input)
+        result = Dataset.for_port(self.output)
+        result.rows.extend(data.rows)
+        result.rows.sort(key=self.key)
+        self.count(self.ACCEPTED_COUNT, None, context, len(result.rows))
+        context.save(self.output, result)
+
+@attr.s
+class AcceptTransform(ThroughTransform):
+    """
+    A row-filter which selects records from an incoming dataset based on whether a value is in an accepted set.
+     """
+    values: Port = attr.ib()
+    input_keys: Keys = attr.ib()
+    value_keys: Keys = attr.ib()
+    exclude: bool = attr.ib(kw_only=True, default=False)
+
+    @classmethod
+    def create(cls, id: str, input: Port, values: Port, input_keys, value_keys, **kwargs):
+        """
+        Construct a filter
+
+        :param id: The filter id
+        :param input: The input dataset
+        :param values: The values to test against
+        :param input_keys: The keys to look up on the input
+        :param value_keys: The keys to look up on the output
+        :keyword exclude: If set to true, accept records not matching any values
+        :keyword case_insensitive: If set to true, make lookups case insensitive
+        :keyword record_rejects: If set to true, record rejections
+
+        :return: A filter with the appropriate information
+        """
+        output = Port(input.schema)
+        reject = Port(input.schema) if kwargs.pop('record_rejects', False) else None
+        case_insensitive = kwargs.pop('case_insensitive', False)
+        input_keys = Keys.make_keys(input.schema, input_keys, case_insensitive=case_insensitive)
+        value_keys = Keys.make_keys(values.schema, value_keys, case_insensitive=case_insensitive)
+        return AcceptTransform(id, input, output, reject, values, input_keys, value_keys, **kwargs)
+
+    def inputs(self) -> Dict[str, Port]:
+        inputs = super().inputs()
+        inputs['values'] = self.values
+        return inputs
+
+    def execute(self, context: ProcessingContext):
+        data = context.acquire(self.input)
+        result = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        rejects = Dataset.for_port(self.reject) if self.reject is not None else None
+        values = context.acquire(self.values)
+        value_index = Index.create(values, self.value_keys, IndexType.FIRST)
+        additional = self.build_additional(context)
+        for row in data.rows:
+            try:
+                found = value_index.find(row, self.input_keys)
+                if (not self.exclude and found is not None) or (self.exclude and found is None):
+                    self.count(self.ACCEPTED_COUNT, row, context)
+                    transformed = self.compose(row, context, additional)
+                    result.add(transformed)
+                else:
+                    if rejects is not None:
+                        self.count(self.REJECTED_COUNT, row, context)
+                        rejects.add(row)
+            except Exception as err:
+                if self.fail_on_exception:
+                    raise err
+                errors.add(Record.error(row, err))
+                self.count(self.ERROR_COUNT, row, context)
+            self.count(self.PROCESSED_COUNT, row, context)
+        context.save(self.output, result)
+        context.save(self.error, errors)
+        if self.reject is not None:
+            context.save(self.reject, rejects)
+
+
+    def compose(self, record: Record, context: ProcessingContext, additional) -> Record:
+        """
+        :return: Return the record if the predicate is true, otherwise None
+        """
+        return record
+
+
+@attr.s
+class ClusterTransform(ThroughTransform):
+    """
+    Cluster groups of records together and then either pick the "best" one or output them as a group
+     """
+    signature: Callable = attr.ib()
+    selector: Callable = attr.ib()
+    identifier_keys: Keys = attr.ib()
+    parent_keys: Keys = attr.ib()
+    accepted_keys: Keys = attr.ib()
+
+    @classmethod
+    def create(cls, id: str, input: Port, signature: Callable, selector: Callable, identifier_keys, parent_keys = None, accepted_keys = None, **kwargs):
+        """
+        Construct a clusterer
+
+        :param id: The filter id
+        :param input: The input dataset
+        :param signature: The function to generate a signature for a record
+        :param selector: An optional function to choose the elements of the cluster to output
+        :param identifier_keys: If set, the source of identifiers
+        :param parent_keys: The keys that match the identifier for the parent
+        :param accepted_keys: The keys that match the identifier for accepted values
+        :keyword record_rejects: If set to true, record rejections
+
+        :return: A filter with the appropriate information
+        """
+        output = Port.port(input.schema)
+        reject = Port.with_field(input.schema, "_cluster_signature") if kwargs.pop('record_rejects', False) else None
+        identifier_keys = Keys.make_keys(input.schema, identifier_keys) if identifier_keys else None
+        parent_keys = Keys.make_keys(input.schema, parent_keys) if parent_keys else None
+        accepted_keys = Keys.make_keys(input.schema, accepted_keys) if accepted_keys else None
+        return ClusterTransform(id, input, output, reject, signature, selector, identifier_keys, parent_keys, accepted_keys, **kwargs)
+
+
+    def execute(self, context: ProcessingContext):
+        data = context.acquire(self.input)
+        result = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        rejects = Dataset.for_port(self.reject) if self.reject is not None else None
+        additional = self.build_additional(context)
+        clusters = OrderedDict()
+        for row in data.rows:
+            try:
+                row = self.compose(row, context, additional)
+                sig = self.signature(row)
+                if sig in clusters:
+                    append = clusters.get(sig)
+                else:
+                    append = list()
+                    clusters[sig] = append
+                append.append(row)
+            except Exception as err:
+                if self.fail_on_exception:
+                    raise err
+                errors.add(Record.error(row, err))
+                self.count(self.ERROR_COUNT, row, context)
+            self.count(self.PROCESSED_COUNT, row, context)
+        used = list()
+        remap = dict()
+        for (sig, cluster) in clusters.items():
+            all = cluster
+            if self.selector:
+                cluster = self.selector((sig), cluster)
+            for row in cluster:
+                id = self.identifier_keys.get(row)
+                remap[id] = id
+                used.append(row)
+                self.count(self.ACCEPTED_COUNT, row, context)
+            if rejects is not None and len(cluster) < len(all):
+                id = self.identifier_keys.get(cluster[0])
+                for row in all:
+                    if row not in cluster:
+                        row = Record.copy(row)
+                        row.data['_cluster_signature'] = str(sig)
+                        oldid = self.identifier_keys.get(row)
+                        remap[oldid] = id
+                        rejects.add(row)
+                        self.count(self.REJECTED_COUNT, row, context)
+        for row in used:
+            if self.parent_keys is None and self.accepted_keys is None:
+                result.add(row)
+            else:
+                copy = Record.copy(row)
+                if self.parent_keys is not None:
+                    parentid = self.parent_keys.get(copy)
+                    if parentid is not None:
+                        if parentid not in remap:
+                            raise ValueError(f"Unable to find parent id {parentid} in map")
+                        parentid = remap[parentid]
+                        self.parent_keys.set(copy, parentid)
+                if self.accepted_keys is not None:
+                    acceptedid = self.accepted_keys.get(copy)
+                    if acceptedid is not None:
+                        if acceptedid not in remap:
+                            raise ValueError(f"Unable to find accepted id {acceptedid} in map")
+                        acceptedid = remap[acceptedid]
+                        self.accepted_keys.set(copy, acceptedid)
+                result.add(copy)
+        context.save(self.output, result)
+        context.save(self.error, errors)
+        if self.reject is not None:
+            context.save(self.reject, rejects)
+
+
+    def compose(self, record: Record, context: ProcessingContext, additional) -> Record:
+        """
+        :return: Return the record by default
+        """
+        return record
+
+class NullTransform(ThroughTransform):
+    """
+    A transform that just copies the input to the output"
+    """
+
+    @classmethod
+    def create(cls, id: str, input: Port):
+        output = Port.port(input.schema)
+        return NullTransform(id, input, output, None)
+
+    def execute(self, context: ProcessingContext):
+        source = context.acquire(self.input)
+        context.save(self.output, source)

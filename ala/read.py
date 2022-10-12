@@ -39,7 +39,7 @@ def reader() -> Orchestrator:
         'datasetID': MapTransform.orDefault(MapTransform.choose('datasetID'), 'datasetID'),
         'status': MapTransform.orDefault(MapTransform.choose('status'), 'defaultVernacularStatus')
     }, auto = True)
-    dwc_vernacular_denormalised = DenormaliseTransform.create("dwc_veractual_denormalised", dwc_vernacular.output, 'vernacularName', ',')
+    dwc_vernacular_denormalised = DenormaliseTransform.create("dwc_vernacular_denormalised", dwc_vernacular.output, 'vernacularName', ',')
     dwc_vernacular_identified = MapTransform.create("dwc_vernacular_identifier", dwc_vernacular_denormalised.output, VernacularSchema(), {
         'nameID': MapTransform.uuid()
     }, auto = True)

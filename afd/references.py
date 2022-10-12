@@ -132,6 +132,7 @@ class PublicationTransform(LookupTransform):
             'namePublishedInYear': year,
             'namePublishedIn': ''.join(parts),
             'namePublishedInID': doi,
+            'doi': doi,
             'source': source
         }, None)
         return formatted
@@ -163,6 +164,7 @@ class ReferenceTransform(LookupTransform):
            'namePublishedInYear': publication.namePublishedInYear,
            'namePublishedIn': ref,
            'namePublishedInID': publication.namePublishedInID,
+           'doi': publication.doi,
            'source': publication.data.get('source'),
        }, None)
        return formatted

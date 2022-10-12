@@ -36,7 +36,7 @@
    <xsl:choose>
     <xsl:when test="$englishPreferred"><xsl:value-of select="$englishPreferred/vp:Term_Text"/></xsl:when>
     <xsl:when test="$englishNonPreferredCurrent"><xsl:value-of select="$englishNonPreferredCurrent[1]/vp:Term_Text"/></xsl:when>
-   <xsl:otherwise><xsl:value-of select="vp:Terms/vp:Preferred_Term/vp:Term_Text"/></xsl:otherwise>
+    <xsl:otherwise><xsl:value-of select="vp:Terms/vp:Preferred_Term/vp:Term_Text"/></xsl:otherwise>
    </xsl:choose>
   </xsl:variable>
 <xsl:value-of select="@Subject_ID"/>,<!--

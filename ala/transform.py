@@ -29,13 +29,14 @@ class SpeciesListSource(Source):
     """Read a species list from the ALA species list service"""
     service: str = attr.ib()
     link: str = attr.ib()
+    batchsize: int = attr.ib()
 
     @classmethod
-    def create(cls, id:str, service="https://lists.ala.org.au/ws", link="https://lists.ala.org.au"):
+    def create(cls, id:str, service="https://lists.ala.org.au/ws", link="https://lists.ala.org.au", batchsize=100):
         schema = ExtendedTaxonSchema()
         output = Port.port(schema)
         error = Port.error_port(schema)
-        return SpeciesListSource(id, output, error, service, link)
+        return SpeciesListSource(id, output, error, service, link, batchsize)
 
     def execute(self, context: ProcessingContext):
         output = Dataset.for_port(self.output)
@@ -44,40 +45,48 @@ class SpeciesListSource(Source):
         dr = context.get_default('datasetID')
         idstem = "ALA_" + dr.upper() + "_"
         defaultSource = self.link + "/speciesListItem/list/" + dr
-        list = requests.get(self.service + "/speciesListItems/" + dr, params={'includeKVP': True}).json()
+        # If we ever get batch size working
+        cont = True
         line = 1
-        for item in list:
-            data = dict()
-            for kv in item.get('kvpValues', []):
-                key: str = kv.get('key', None)
-                value = kv.get('value', None)
-                if key is not None:
-                    key = key.lower().replace(' ', '')
-                if key is not None and value is not None and key in fieldmap:
-                    data[fieldmap[key]] = value
-            data['taxonID'] = idstem + str(line)
-            data['scientificName'] = item['name']
-            data['datasetID'] = item['dataResourceUid']
-            if 'source' in data:
-                data['source'] = extract_href(data['source'])
-            else:
-                data['source'] = defaultSource + "?q=" + urllib.parse.quote_plus(item['name'])
-            if 'taxonomicStatus' not in data:
-                status = 'inferredUnplaced'
-                if 'kingdom' in data or 'phylum' in data or 'class' in data or 'order' in data or 'family' in data:
-                    status = context.get_default('defaultAcceptedStatus', 'inferredAccepted')
-                if 'acceptedNameUsage' in data:
-                    status = context.get_default('defaultSynonymStatus', 'inferredSynonym')
-                data['taxonomicStatus'] = status
-            record = Record(line, data, None)
-            if data['scientificName'] is None:
-                errors.add(Record.error(record, None, "No scientific name"))
-                self.count(self.ERROR_COUNT, record, context)
-            else:
-                output.add(record)
-                self.count(self.ACCEPTED_COUNT, record, context)
-            self.count(self.PROCESSED_COUNT, record, context)
-            line += 1
+        offset = 0
+        while cont:
+            request = requests.request('GET', self.service + "/speciesListItems/" + dr, params={'q': '', 'includeKVP': 'true', 'max': 1000000})
+            list = request.json()
+            for item in list:
+                data = dict()
+                for kv in item.get('kvpValues', []):
+                    key: str = kv.get('key', None)
+                    value = kv.get('value', None)
+                    if key is not None:
+                        key = key.lower().replace(' ', '')
+                    if key is not None and value is not None and key in fieldmap:
+                        data[fieldmap[key]] = value
+                data['taxonID'] = idstem + str(line)
+                data['scientificName'] = item['name']
+                data['datasetID'] = item['dataResourceUid']
+                if 'source' in data:
+                    data['source'] = extract_href(data['source'])
+                else:
+                    data['source'] = defaultSource + "?q=" + urllib.parse.quote_plus(item['name'])
+                if 'taxonomicStatus' not in data:
+                    status = 'inferredUnplaced'
+                    if 'kingdom' in data or 'phylum' in data or 'class' in data or 'order' in data or 'family' in data:
+                        status = context.get_default('defaultAcceptedStatus', 'inferredAccepted')
+                    if 'acceptedNameUsage' in data:
+                        status = context.get_default('defaultSynonymStatus', 'inferredSynonym')
+                    data['taxonomicStatus'] = status
+                record = Record(line, data, None)
+                if data['scientificName'] is None:
+                    errors.add(Record.error(record, None, "No scientific name"))
+                    self.count(self.ERROR_COUNT, record, context)
+                else:
+                    output.add(record)
+                    self.count(self.ACCEPTED_COUNT, record, context)
+                self.count(self.PROCESSED_COUNT, record, context)
+                line += 1
+            offset += len(list)
+            # cont = len(list) > 0
+            cont = False
         context.save(self.output, output)
         context.save(self.error, errors)
 
@@ -99,12 +108,16 @@ class VernacularListSource(Source):
         output = Dataset.for_port(self.output)
         errors = Dataset.for_port(self.error)
         fieldmap = { (field.data_key if field.data_key is not None else field.name): field.name for field in self.output.schema.fields.values()}
+        vernacular = self.output.schema.fields.get('vernacularName')
+        fieldmap['commonName'] = vernacular
+        fieldmap['common name'] = vernacular
+        fieldmap['vernacular name'] = vernacular
         additional = { (alias, fieldmap.get(field)) for (alias, field)  in self.aliases.items() }
         fieldmap.update(additional)
         dr = context.get_default('datasetID')
         idstem = "ALA_" + dr.upper() + "_V"
         defaultSource = self.link + "/speciesListItem/list/" + dr
-        list = requests.get(self.service + "/speciesListItems/" + dr, params={'includeKVP': True}).json()
+        list = requests.get(self.service + "/speciesListItems/" + dr, params={'includeKVP': True, 'max': 10000}).json()
         line = 1
         for item in list:
             data = dict()
@@ -121,8 +134,8 @@ class VernacularListSource(Source):
             else:
                 data['source'] = defaultSource + "?q=" + urllib.parse.quote_plus(item['name'])
             record = Record(line, data, None)
-            if data['vernacularName'] is None:
-                errors.add(Record.error(record, None, "No vernacular name"))
+            if data.get('vernacularName') is None:
+                errors.add(Record.error(record, None, "No vernacular name for " + dr + " " + str(line) + " " + item['name']))
                 self.count(self.ERROR_COUNT, record, context)
             else:
                 output.add(record)
@@ -151,7 +164,14 @@ class CollectorySource(Source):
             dr = context.get_default('datasetID')
             url = self.service + "/dataResource/" + dr
             self.logger.info("Retrieving metadata from " + url)
-            collection = requests.get(url).json()
+            collection = {'uid': dr }
+            try:
+                collection = requests.get(url).json()
+            except Exception as err:
+                self.logger.error(f"Unable to retrieve {url}: {err}")
+                if self.fail_on_exception:
+                    raise err
+                self.logger.warn(f"Using defaults for {dr}")
             metadata = dict()
             metadata['uid'] = collection.get('uid', None)
             metadata['name'] = collection.get('name', None)

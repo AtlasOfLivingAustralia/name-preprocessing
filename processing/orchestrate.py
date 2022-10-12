@@ -169,7 +169,8 @@ class Orchestrator(Node):
         while not completed:
             completed = True
             ready = [node for node in self.nodes if node.is_executable(context) and node not in done]
-            for node in ready:
+            if len(ready) > 0:
+                node = ready[0]
                 try:
                     node.run(context)
                     context.completed.add(node.id)
@@ -201,9 +202,10 @@ class Selector(Node):
     output_dir_key: Keys = attr.ib()
     config_dir_key: Keys = attr.ib()
     work_dir_key: Keys = attr.ib()
+    default_id: str = attr.ib()
 
     @classmethod
-    def create(cls, id: str, input: Port, selector_key, directory_key, input_dir_key, output_dir_key, config_dir_key, work_dir_key, *args, **kwargs):
+    def create(cls, id: str, input: Port, selector_key, directory_key, input_dir_key, output_dir_key, config_dir_key, work_dir_key, default_id: str, *args, **kwargs):
         nodes = { node.id: node for node in args }
         selector_key = Keys.make_keys(input.schema, selector_key)
         directory_key = Keys.make_keys(input.schema, directory_key)
@@ -211,7 +213,7 @@ class Selector(Node):
         output_dir_key = Keys.make_keys(input.schema, output_dir_key) if output_dir_key is not None else None
         config_dir_key = Keys.make_keys(input.schema, config_dir_key) if config_dir_key is not None else None
         work_dir_key = Keys.make_keys(input.schema, work_dir_key) if work_dir_key is not None else None
-        return Selector(id, input, nodes, selector_key, directory_key, input_dir_key, output_dir_key, config_dir_key, work_dir_key)
+        return Selector(id, input, nodes, selector_key, directory_key, input_dir_key, output_dir_key, config_dir_key, work_dir_key, default_id)
 
     def inputs(self) -> Dict[str, Port]:
         inputs = super().inputs()
@@ -232,13 +234,23 @@ class Selector(Node):
 
     def execute(self, context: ProcessingContext):
         input = context.acquire(self.input)
+        defaults = next((r.data for r in input.rows if r.id == self.default_id), {})
+        if defaults:
+            defaults = {field.name: defaults[field.name] for field in input.schema.fields.values() if defaults[field.name] is not None}
+        else:
+            defaults = {}
+        self.logger.info(f"Default configuration values {defaults}")
         for record in input.rows:
             self.count(self.PROCESSED_COUNT, record, context)
             key = self.selector_key.get(record)
+            if key is None:
+                continue
             node = self.nodes.get(key)
             if node is None:
                 raise ProcessingException("No matching node for " + key)
-            sub_defaults = { field.name: record.data[field.name] for field in input.schema.fields.values() if record.data[field.name] is not None }
+            sub_defaults = dict(defaults)
+            sub_defaults.update( { field.name: record.data[field.name] for field in input.schema.fields.values() if record.data[field.name] is not None } )
+            self.logger.info(f"Default configuration values for {record.id} is {sub_defaults}")
             sub_directory = self.directory_key.get(record)
             sub_input = self.locate_directory(record, self.input_dir_key, context.input_dir, sub_directory)
             sub_output = self.locate_directory(record, self.output_dir_key, context.output_dir, sub_directory)

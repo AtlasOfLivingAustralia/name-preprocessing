@@ -77,8 +77,7 @@ class CaabToDwcTaxonTaxonTransform(ReferenceTransform):
             'taxonRank': choose(record.RANK, 'unknown'),
             'taxonConceptID': taxonID,
             'taxonomicStatus': self.taxonomicStatus,
-            'nomenclaturalStatus': None,
-            'taxonRemarks': strip_markup(record.TAXON_WWW_NOTES),
+            'nomenclaturalStatus': None
         }
         errors = self.output.schema.validate(dwc)
         if errors:

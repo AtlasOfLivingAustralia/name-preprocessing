@@ -1,60 +1,125 @@
-locationID,locality
-http://vocab.getty.edu/tgn/7029392,World
-http://vocab.getty.edu/tgn/7000434,ACI
-http://vocab.getty.edu/tgn/1001989,ACT
-http://vocab.getty.edu/tgn/7785992,AR
-http://vocab.getty.edu/tgn/7024203,CaI
-http://vocab.getty.edu/tgn/7004615,ChI
-http://vocab.getty.edu/tgn/7000429,CoI
-http://vocab.getty.edu/tgn/1001991,CSI
-http://vocab.getty.edu/tgn/1007365,HI
-http://vocab.getty.edu/tgn/1097194,JB
-http://vocab.getty.edu/tgn/7001990,Lord Howe Island
-http://vocab.getty.edu/tgn/7001990,Lord Howe I.
-http://vocab.getty.edu/tgn/7001990,LHI
-http://vocab.getty.edu/tgn/4000115,MDI
-http://vocab.getty.edu/tgn/1007961,Macquarie Is.
-http://vocab.getty.edu/tgn/1007961,MI
-http://vocab.getty.edu/tgn/7001828,NSW
-http://vocab.getty.edu/tgn/7000430,Norfolk I.
-http://vocab.getty.edu/tgn/7000430,NI
-http://vocab.getty.edu/tgn/7001829,NT
-http://vocab.getty.edu/tgn/7001830,Qld
-http://vocab.getty.edu/tgn/7001831,SA
-http://vocab.getty.edu/tgn/7001992,Tas
-http://vocab.getty.edu/tgn/7006238,Vic
-http://vocab.getty.edu/tgn/7001834,WA
-http://vocab.getty.edu/tgn/7001242,Northern Africa
-http://vocab.getty.edu/tgn/7001242,South Tropical Africa
-http://vocab.getty.edu/tgn/7001242,Southern Africa
-http://vocab.getty.edu/tgn/1000003,Southwestern Europe
-http://vocab.getty.edu/tgn/1000003,Southeastern Europe
-http://vocab.getty.edu/tgn/1000004,Asia-Temperate
-http://vocab.getty.edu/tgn/1000004,Eastern Asia
-http://vocab.getty.edu/tgn/1000004,Asia-Tropical
-http://vocab.getty.edu/tgn/1000004,Indian Subcontinent
-http://vocab.getty.edu/tgn/1000001,Northern America
-http://vocab.getty.edu/tgn/1000001,Central America
-http://vocab.getty.edu/tgn/1000004,Australasia
-http://vocab.getty.edu/tgn/1000002,Southern America
-http://vocab.getty.edu/tgn/1000002,Southern South America
-http://vocab.getty.edu/tgn/7014652,Pacific
-http://vocab.getty.edu/tgn/7014652,Southwestern Pacific
-http://vocab.getty.edu/tgn/8711665,Cook Is.
-http://vocab.getty.edu/tgn/1000049,Chile Central
-http://vocab.getty.edu/tgn/1000049,Chile South
-http://vocab.getty.edu/tgn/1009931,"Chatham Islands, New Zealand"
-http://vocab.getty.edu/tgn/1000226,"North Island, New Zealand"
-http://vocab.getty.edu/tgn/1000226,"South Island, New Zealand"
-http://vocab.getty.edu/tgn/1000226,"Subantarctic Islands, New Zealand"
-http://vocab.getty.edu/tgn/7006214,"Kermadec Islands, New Zealand"
-http://vocab.getty.edu/tgn/1010303,"Snares Islands, New Zealand"
-http://vocab.getty.edu/tgn/1010303,"Snares, New Zealand"
-http://vocab.getty.edu/tgn/1010345,"Three Kings Islands, New Zealand"
-http://vocab.getty.edu/tgn/1010345,"Three Kings, New Zealand"
-http://vocab.getty.edu/tgn/7016622,Canary Islands
-http://vocab.getty.edu/tgn/7016622,Canary Is.
-http://vocab.getty.edu/tgn/7016540,Cape Province
-http://vocab.getty.edu/tgn/7015963,Borneo
-http://vocab.getty.edu/tgn/7006477,Argentina South
-http://vocab.getty.edu/tgn/7006160,New Guinea
+locationID,locality,locationRemarks
+# Mappings from NSL
+http://vocab.getty.edu/tgn/7029392,World,
+http://vocab.getty.edu/tgn/7029392,Extra-Aust.,
+http://vocab.getty.edu/tgn/7000490,Aust.,
+http://vocab.getty.edu/tgn/7000434,ACI,
+http://vocab.getty.edu/tgn/1001989,ACT,
+http://vocab.getty.edu/tgn/1001989,?ACT,
+http://vocab.getty.edu/tgn/7785992,AR,
+http://vocab.getty.edu/tgn/7024203,CaI,
+http://vocab.getty.edu/tgn/7004615,ChI,
+http://vocab.getty.edu/tgn/7004615,Chl,
+http://vocab.getty.edu/tgn/7000429,CoI,
+http://vocab.getty.edu/tgn/1001991,CSI,
+http://vocab.getty.edu/tgn/1007365,HI,
+http://vocab.getty.edu/tgn/1097194,JB,
+http://vocab.getty.edu/tgn/7001990,Lord Howe Island,
+http://vocab.getty.edu/tgn/7001990,Lord Howe I.,
+http://vocab.getty.edu/tgn/7001990,LHI,
+http://vocab.getty.edu/tgn/4000115,MDI,
+http://vocab.getty.edu/tgn/1007961,Macquarie Is.,
+http://vocab.getty.edu/tgn/1007961,MI,
+http://vocab.getty.edu/tgn/7001828,NSW,
+http://vocab.getty.edu/tgn/7001828,?NSW,
+http://vocab.getty.edu/tgn/7000430,Norfolk I.,
+http://vocab.getty.edu/tgn/7000430,NI,
+http://vocab.getty.edu/tgn/7001829,NT,
+http://vocab.getty.edu/tgn/7001829,?NT,
+http://vocab.getty.edu/tgn/7001830,Qld,
+http://vocab.getty.edu/tgn/7001830,?Qld,
+http://vocab.getty.edu/tgn/7001831,SA,
+http://vocab.getty.edu/tgn/7001831,?SA,
+http://vocab.getty.edu/tgn/7001992,Tas,
+http://vocab.getty.edu/tgn/7001992,?Tas,
+http://vocab.getty.edu/tgn/7006238,Vic,
+http://vocab.getty.edu/tgn/7006238,?Vic,
+http://vocab.getty.edu/tgn/7001834,WA,
+http://vocab.getty.edu/tgn/7001834,?WA,
+# Mappings from NZOR
+http://vocab.getty.edu/tgn/7001242,Northern Africa,
+http://vocab.getty.edu/tgn/7001242,South Tropical Africa,
+http://vocab.getty.edu/tgn/7001242,Southern Africa,
+http://vocab.getty.edu/tgn/1000003,Southwestern Europe,
+http://vocab.getty.edu/tgn/1000003,Southeastern Europe,
+http://vocab.getty.edu/tgn/1000004,Asia-Temperate,
+http://vocab.getty.edu/tgn/1000004,Eastern Asia,
+http://vocab.getty.edu/tgn/1000004,Asia-Tropical,
+http://vocab.getty.edu/tgn/1000004,Indian Subcontinent,
+http://vocab.getty.edu/tgn/1000001,Northern America,
+http://vocab.getty.edu/tgn/1000001,Central America,
+http://vocab.getty.edu/tgn/1000004,Australasia,
+http://vocab.getty.edu/tgn/1000002,Southern America,
+http://vocab.getty.edu/tgn/1000002,Southern South America,
+http://vocab.getty.edu/tgn/7014652,Pacific,
+http://vocab.getty.edu/tgn/7014652,Southwestern Pacific,
+http://vocab.getty.edu/tgn/8711665,Cook Is.,
+http://vocab.getty.edu/tgn/1000049,Chile Central,
+http://vocab.getty.edu/tgn/1000049,Chile South,
+http://vocab.getty.edu/tgn/1009931,"Chatham Islands, New Zealand",
+http://vocab.getty.edu/tgn/1000226,"North Island, New Zealand",
+http://vocab.getty.edu/tgn/1000226,"South Island, New Zealand",
+http://vocab.getty.edu/tgn/1000226,"Subantarctic Islands, New Zealand",
+http://vocab.getty.edu/tgn/7006214,"Kermadec Islands, New Zealand",
+http://vocab.getty.edu/tgn/1010303,"Snares Islands, New Zealand",
+http://vocab.getty.edu/tgn/1010303,"Snares, New Zealand",
+http://vocab.getty.edu/tgn/1010345,"Three Kings Islands, New Zealand",
+http://vocab.getty.edu/tgn/1010345,"Three Kings, New Zealand",
+http://vocab.getty.edu/tgn/7016622,Canary Islands,
+http://vocab.getty.edu/tgn/7016622,Canary Is.,
+http://vocab.getty.edu/tgn/7016540,Cape Province,
+http://vocab.getty.edu/tgn/7015963,Borneo,
+http://vocab.getty.edu/tgn/7006477,Argentina South,
+http://vocab.getty.edu/tgn/7006160,New Guinea,
+# Mappings from ALA records
+http://vocab.getty.edu/tgn/7787643,Pilbara,
+http://vocab.getty.edu/tgn/7000299,"Korea, Republic of",
+http://vocab.getty.edu/tgn/7014206,Atlantic,
+http://vocab.getty.edu/tgn/7014206,Western Atlantic Ocean,
+http://vocab.getty.edu/tgn/7016682,Indian,
+http://vocab.getty.edu/tgn/7029367,Central North Pacific,
+http://vocab.getty.edu/tgn/7029367,Central North Pacific,
+http://vocab.getty.edu/tgn/7029367,North-east Pacific Ocean,
+http://vocab.getty.edu/tgn/7029367,N.E. Pacific Ocean,
+http://vocab.getty.edu/tgn/7029367,N.E. Pacific,
+http://vocab.getty.edu/tgn/7029367,North-west Pacific Ocean,
+http://vocab.getty.edu/tgn/7029367,N.W. Pacific Ocean,
+http://vocab.getty.edu/tgn/7014652,Central Pacific Ocean,
+http://vocab.getty.edu/tgn/7014652,East Central Pacific Ocean,
+http://vocab.getty.edu/tgn/7014652,E Central Pacific Ocean,
+http://vocab.getty.edu/tgn/7014652,E Central Pacific,
+http://vocab.getty.edu/tgn/7014652,Eastern Pacific Ocean,
+http://vocab.getty.edu/tgn/7014652,Western Pacific Ocean,
+http://vocab.getty.edu/tgn/7029385,South-west Pacific Ocean,
+http://vocab.getty.edu/tgn/7029385,Southern Pacific Ocean,
+http://vocab.getty.edu/tgn/7029385,Southwest Pacific Ocean,
+http://vocab.getty.edu/tgn/7029385,South-east Pacific Ocean,
+http://vocab.getty.edu/tgn/7029385,Southeast Pacific Ocean,
+http://vocab.getty.edu/tgn/1112234,Subantarctic Ocean,
+http://vocab.getty.edu/tgn/7016682,Western Indian Ocean,
+http://vocab.getty.edu/tgn/7014206,North Atlantic Ocean,
+http://vocab.getty.edu/tgn/7014206,South Atlantic Ocean,
+http://vocab.getty.edu/tgn/7002130,Japan Sea,
+http://vocab.getty.edu/tgn/1112322,Siberian Sea,
+http://vocab.getty.edu/tgn/7819597,Houtman Abrolhos Wallabi Group,
+http://vocab.getty.edu/tgn/7854458,Houtman Abrolhos Easter Group,
+http://vocab.getty.edu/tgn/7834707,Houtman Abrolhos Pelsaert Group,
+http://vocab.getty.edu/tgn/7785992,Ashmore Reef (East),
+http://vocab.getty.edu/tgn/7785992,Ashmore Reef (Middle),
+http://vocab.getty.edu/tgn/7785992,Ashmore Reef (West),
+http://vocab.getty.edu/tgn/7844184,Lancelin - Dongara,
+http://vocab.getty.edu/tgn/1010238,Recherche Archipelago,
+http://vocab.getty.edu/tgn/1113812,Shark Bay,Default Shark Bay
+http://vocab.getty.edu/tgn/7018359,Palestine,
+http://vocab.getty.edu/tgn/7005151,Falkland Islands (Malvinas),
+http://vocab.getty.edu/tgn/7005152,Falkland Islands (Malvinas),
+http://vocab.getty.edu/tgn/1000163,French Southern Territories,
+http://vocab.getty.edu/tgn/1010882,Cape Leeuwin,
+http://vocab.getty.edu/tgn/1000001,NORTH_AMERICA,
+http://vocab.getty.edu/tgn/1000002,SOUTH_AMERICA,
+http://vocab.getty.edu/tgn/7005005,Svalbard and Jan Mayen,
+http://vocab.getty.edu/tgn/7001831,Sth Aust.,
+http://vocab.getty.edu/tgn/7786171,Bird (Shoalwater Bay),
+http://vocab.getty.edu/tgn/7785839,Seal (Shoalwater Bay),
+http://vocab.getty.edu/tgn/7786403,Shag Rock (Shoalwater Bay),
+http://vocab.getty.edu/tgn/7003796,Aland Region,Historic region used in some records

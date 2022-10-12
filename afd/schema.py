@@ -55,6 +55,12 @@ class TaxonSchema(Schema):
     ASSIGNED_USER = fields.String()
     DRAFTNAMEONLY = fields.Boolean()
     ASSIGNED_TAXON_ID = fields.String()
+    IBRA_REGION_CODES = fields.String(missing = None)
+    IBRA_REGIONS = fields.String(missing = None)
+    IMCRA_REGIONS = fields.String(missing = None)
+    STATE_CODES = fields.String(missing = None)
+    STATE = fields.String(missing = None)
+    RANK = fields.String(missing = None)
 
     class Meta:
         ordered = True
@@ -173,6 +179,7 @@ class FormattedPublicationSchema(Schema):
     namePublishedInID = fields.String(missing=None)
     namePublishedIn = fields.String()
     namePublishedInYear = fields.String(missing=None)
+    doi = fields.String(missing=None)
     source = fields.URL()
 
     class Meta:
@@ -185,6 +192,7 @@ class FormattedReferenceSchema(Schema):
     namePublishedInID = fields.String(missing=None)
     namePublishedIn = fields.String()
     namePublishedInYear = fields.String(missing=None)
+    doi = fields.String(missing=None)
     source = fields.String()
 
     class Meta:

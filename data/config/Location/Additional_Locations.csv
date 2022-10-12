@@ -1,0 +1,3 @@
+locationID,parentLocationID,acceptedLocationID,datasetID,geographyType,locality,countryCode,decimalLatitude,decimalLongitude,area
+http://ala.org.au/locations/country/Antarctica,,http://vocab.getty.edu/tgn/1000007,dr19606,country,Antarctica,AQ,-83.843,65.725,
+http://ala.org.au/locations/waterBody/Antarctica,,http://vocab.getty.edu/tgn/1000007,dr19606,waterBody,Antarctica,,-83.843,65.725,

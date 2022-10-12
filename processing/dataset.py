@@ -117,9 +117,10 @@ class Keys:
 class Keys:
     """Key description for indexing"""
     keys: Tuple[fields.Field] = attr.ib()
+    case_insensitive: bool = attr.ib(kw_only=True, default=False)
 
     @classmethod
-    def make_keys(cls, schema: Schema, keys):
+    def make_keys(cls, schema: Schema, keys, **kwargs):
         if isinstance(keys, Keys):
             multi = keys.multi
             ignore_duplicates = keys.ignore_duplicates
@@ -132,7 +133,12 @@ class Keys:
             key_fields = tuple((get_key(key) for key in keys))
         if not all(key_fields):
             return None
-        return Keys(key_fields)
+        return Keys(key_fields, **kwargs)
+
+    def _normalise(self, value):
+        if value is not None and isinstance(value, str) and self.case_insensitive:
+            value = value.lower();
+        return value
 
     def make_key_map(self, record: Record, target: Keys = None) -> Dict[str, object]:
         """
@@ -147,7 +153,7 @@ class Keys:
             target = self
         if record is None:
             return { target.keys[i].name: None for i, key in enumerate(self.keys) }
-        return { target.keys[i].name: record.data.get(key.name) for i, key in enumerate(self.keys) }
+        return { target.keys[i].name: self._normalise(record.data.get(key.name)) for i, key in enumerate(self.keys) }
 
     def get(self, record: Record):
         """
@@ -160,8 +166,8 @@ class Keys:
         if len(self.keys) == 0:
             return None
         if len(self.keys) == 1:
-            return record.data.get(self.keys[0].name)
-        return tuple((record.data.get(key.name) for key in self.keys))
+            return self._normalise(record.data.get(self.keys[0].name))
+        return tuple((self._normalise(record.data.get(key.name)) for key in self.keys))
 
     def set(self, record: Record, value):
         """
@@ -197,15 +203,21 @@ class Port:
         """
         Create a port
         
-        :param schema: Th
-        :param keys: 
-        :param kwargs: 
-        :return: 
+        :param schema: The schema to use
+        :return: A suitable port
         """
         return Port(schema, **kwargs)
 
     @classmethod
     def merged(cls, schema1: Schema, schema2: Schema):
+        """
+        Create a port by merging two schemas.
+        The primary schema takes precedence over the secondary schema when merging
+
+        :param schema1: The primary schema
+        :param schema2: The secondary schema
+        :return: A port for the merged schemas
+        """
         fs = OrderedDict(schema1.fields)
         fs.update({k: v for (k, v) in schema2.fields.items() if k not in schema1.fields})
         uri = getattr(schema1.Meta, 'uri', None)
@@ -215,7 +227,31 @@ class Port:
         return Port(merged_schema)
 
     @classmethod
+    def with_field(cls, schema: Schema, name: str):
+        """
+        Create a port for a schema with an additional (string) field
+
+        :param schema: The base schema
+        :param name: The field name
+
+        :return: A port for the new schema
+        """
+        fs = OrderedDict(schema.fields)
+        fs[name] = fields.String()
+        sc = cls.schema_from_dict(fs, ordered=schema.ordered)
+        error_schema = sc()
+        return Port(error_schema)
+
+    @classmethod
     def error_port(cls, schema: Schema):
+        """
+        Create an error port for a schema
+
+        This is the schema with additional _line and _messages fields so that errors can be recorded
+
+        :param schema: The base schema
+        :return: An error port
+        """
         fs = OrderedDict(schema.fields)
         fs['_line'] = fields.Integer()
         fs['_messages'] = fields.String()

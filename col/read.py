@@ -17,18 +17,18 @@ import attr
 
 from ala.transform import PublisherSource, CollectorySource
 from col.schema import ColTaxonSchema, ColDistributionSchema, ColVernacularSchema, ColAcceptedKingdomSchema, \
-    ColAcceptedDatasetSchema, ColAcceptedLocationSchema, ColAcceptedLanguageSchema
+    ColAcceptedDatasetSchema, ColAcceptedLocationSchema, ColAcceptedLanguageSchema, ColTaxonWithClassificationSchema
 from dwc.meta import MetaFile, EmlFile
 from dwc.schema import TaxonSchema, VernacularSchema, TaxonomicStatusMapSchema, NomenclaturalCodeMapSchema, \
     LocationMapSchema, LocationSchema, DistributionSchema
-from dwc.transform import DwcTaxonValidate, DwcTaxonReidentify
+from dwc.transform import DwcTaxonValidate, DwcTaxonReidentify, DwcTaxonParent
 from processing.dataset import Port, Index, Keys, Record, IndexType
-from processing.node import ProcessingContext
+from processing.node import ProcessingContext, NullNode
 from processing.orchestrate import Orchestrator
 from processing.sink import CsvSink
 from processing.source import CsvSource
 from processing.transform import normalise_spaces, LookupTransform, Predicate, FilterTransform, MapTransform, choose, \
-    TrailTransform
+    TrailTransform, NullTransform
 
 
 @attr.s
@@ -37,6 +37,7 @@ class ColUsePredicate(Predicate):
     kingdoms: Port = attr.ib()
     datasets: Port = attr.ib()
     distributions: Port = attr.ib()
+    excluded_names: set = attr.ib()
 
     def inputs(self) -> Dict[str, Port]:
         inputs = super().inputs()
@@ -120,13 +121,13 @@ def clean_name(name: str):
     return None if name == 'Not assigned' else name
 
 def make_identifier(record: Record):
-    return record.identifier if record.identifier is not None else 'CoL:' + str(record.taxonID)
+    return 'CoL:' + str(record.taxonID)
 
 
 def reader() -> Orchestrator:
-    taxon_file = "taxa.txt"
-    distribution_file = "distribution.txt"
-    vernacular_file = "vernacular.txt"
+    taxon_file = "Taxon.tsv"
+    distribution_file = "Distribution.tsv"
+    vernacular_file = "VernacularName.tsv"
     accepted_kingdom_file = "Accepted_Kingdoms.csv"
     accepted_dataset_file = "Accepted_Datasets.csv"
     accepted_location_file = "Accepted_Locations.csv"
@@ -135,8 +136,12 @@ def reader() -> Orchestrator:
     nomenclautural_code_file = "Nomenclatural_Code_Map.csv"
     location_map_file = "Location_Map.csv"
     location_file = "Location.csv"
+    reference_file = "reference.csv"
+    use_reference = True
+    exclude_names = set(['Biota'])
 
     col_taxon_schema = ColTaxonSchema()
+    col_taxon_with_classification_schema = ColTaxonWithClassificationSchema()
     col_distribution_schema = ColDistributionSchema()
     col_vernacular_schema = ColVernacularSchema()
     col_accepted_kingdom_schema = ColAcceptedKingdomSchema()
@@ -156,18 +161,26 @@ def reader() -> Orchestrator:
     taxonomic_status_map = CsvSource.create("taxonomic_status_map", taxonomic_status_file, "ala", col_taxonomic_status_map_schema)
     nomenclautural_code_map = CsvSource.create("nomenclatural_code_map", nomenclautural_code_file, "ala", col_nomenclatural_code_map_schema)
     # Initial use predicate - filter by kingdom
-    col_use_predciate = ColUsePredicate('col_kingdom_use', accepted_kingdoms.output, None, None)
-    taxon_source = CsvSource.create("taxon_source", taxon_file, 'col', col_taxon_schema, no_errors=False, encoding='utf-8-sig', predicate=col_use_predciate)
-    # Use the reference one for faster loading if you have run this once.
-    #taxon_source = CsvSource.create("taxon_source", 'reference.csv', 'excel', col_taxon_schema, no_errors=False, predicate=col_use_predciate)
-    taxon_source_reference = CsvSink.create("taxon_source_reference", taxon_source.output, "reference.csv", "excel", work=True)
+    col_use_predicate = ColUsePredicate('col_kingdom_use', accepted_kingdoms.output, None, None, exclude_names)
+    if use_reference:
+        taxon_base = CsvSource.create("taxon_base", reference_file, 'ala', col_taxon_with_classification_schema, no_errors=False)
+        taxon_with_kingdom = NullTransform.create("taxon_with_kingdom", taxon_base.output)
+        taxon_source = NullNode.create('taxon_source')
+        taxon_used_reference = NullNode('taxon_used_reference')
+    else:
+        taxon_source = CsvSource.create("taxon_source", taxon_file, 'col', col_taxon_schema, no_errors=False, encoding='utf-8-sig', post_gc=True)
+        taxon_with_kingdom = DwcTaxonParent.create('taxon_with_kingdom', taxon_source.output, 'taxonID', 'parentNameUsageID', 'acceptedNameUsageID', 'scientificName', 'taxonRank', kingdoms=accepted_kingdoms.output)
+        taxon_base = FilterTransform.create('taxon_base', taxon_with_kingdom.output, col_use_predicate)
+        # Use the reference one for faster loading if you have run this once.
+        #taxon_source = CsvSource.create("taxon_source", 'reference.csv', 'excel', col_taxon_schema, no_errors=False, predicate=col_use_predciate)
+        taxon_used_reference = CsvSink.create("taxon_used_reference", taxon_base.output, "reference.csv", "excel", work=True)
     # Initial distro predicate - allowed locations
     col_location_predicate = ColLocationPredicate('col_location_use', accepted_locations.output)
     distribution_source = CsvSource.create("distribution_source", distribution_file, 'col', col_distribution_schema, no_errors=False, encoding='utf-8-sig', predicate=col_location_predicate)
     # Only include taxa by kingdom, dataset, distribution
-    col_filter_predicate = ColUsePredicate('col_use', accepted_kingdoms.output, accepted_datasets.output, distribution_source.output)
-    taxon_use = FilterTransform.create("taxon_use", taxon_source.output, col_filter_predicate)
-    taxon_trail = TrailTransform.create("taxon_trail", taxon_use.output, taxon_source.output, 'taxonID', 'parentNameUsageID', 'acceptedNameUsageID')
+    col_filter_predicate = ColUsePredicate('col_use', accepted_kingdoms.output, accepted_datasets.output, distribution_source.output, exclude_names)
+    taxon_use = FilterTransform.create("taxon_use", taxon_base.output, col_filter_predicate)
+    taxon_trail = TrailTransform.create("taxon_trail", taxon_use.output, taxon_with_kingdom.output, 'taxonID', 'parentNameUsageID', 'acceptedNameUsageID', col_filter_predicate)
     taxon_status_mapped = LookupTransform.create("taxon_status_mapped", taxon_trail.output, taxonomic_status_map.output, 'taxonomicStatus', 'Term', lookup_map={'DwC': 'mappedTaxonomicStatus'})
     taxon_code_mapped = LookupTransform.create("nomenclatural_code_mapped", taxon_status_mapped.output, nomenclautural_code_map.output, 'kingdom', 'kingdom')
     taxon_reidentify = DwcTaxonReidentify.create("taxon_reidentify", taxon_code_mapped.output, 'taxonID', 'parentNameUsageID', 'acceptedNameUsageID', make_identifier)
@@ -190,7 +203,7 @@ def reader() -> Orchestrator:
     taxon_mapping = CsvSink.create('taxon_mapping', taxon_reidentify.mapping, "identifier_mapping.csv", "excel", work=True)
 
     vernacular_source = CsvSource.create("vernacular_source", vernacular_file, 'col', col_vernacular_schema, no_errors=False, encoding='utf-8-sig')
-    vernacular_language = LookupTransform.create("vernacular_laguage", vernacular_source.output, accepted_languages.output, 'language', 'language', reject=True)
+    vernacular_language = LookupTransform.create("vernacular_language", vernacular_source.output, accepted_languages.output, 'language', 'language', reject=True)
     vernacular_use = LookupTransform.create("vernacular_use", vernacular_language.output, taxon_trail.output, 'taxonID', 'taxonID', reject=True, merge=False)
     vernacular_reidentify = LookupTransform.create("vernacular_reidentify", vernacular_use.output, taxon_reidentify.mapping, 'taxonID', 'term', lookup_map={'mapping': 'mappedTaxonID'})
     vernacular_map = MapTransform.create("vernacular_map", vernacular_reidentify.output, VernacularSchema(), {
@@ -205,13 +218,18 @@ def reader() -> Orchestrator:
 
     location_map = CsvSource.create("location_map", location_map_file, "ala", location_map_schema)
     location = CsvSource.create("location", location_file, "ala", location_schema)
-    distribution_location_id = LookupTransform.create('distribution_location_id', distribution_source.output, location_map.output, 'locality', 'locality', lookup_include=['locationID'], overwrite=True, lookup_type=IndexType.FIRST, record_unmatched=True)
-    dwc_distribution = LookupTransform.create('dwc_distribution', distribution_location_id.output, location.output, 'locationID', 'locationID', lookup_include = ['locationID', 'locality', 'countryCode'], overwrite=True, record_unmatched=True)
+    distribution_identified = LookupTransform.create('distribution_identified', distribution_source.output, accepted_locations.output, 'locationID', 'locationID', lookup_include=['locality', 'country'], overwrite=True, lookup_type=IndexType.FIRST, record_unmatched=True)
+    distribution_location_id = LookupTransform.create('distribution_location_id', distribution_identified.output, location_map.output, 'locality', 'locality', lookup_include=['locationID'], overwrite=True, lookup_type=IndexType.FIRST, record_unmatched=True, break_begin=True)
+    dwc_distribution = LookupTransform.create('dwc_distribution', distribution_location_id.output, location.output, 'locationID', 'locationID', lookup_prefix = 'ala_', record_unmatched=True)
     dwc_distribution_reidentify = LookupTransform.create("dwc_distribution_reidentify", dwc_distribution.output, taxon_reidentify.mapping, 'taxonID', 'term', lookup_map={'mapping': 'mappedTaxonID'}, reject=True)
     dwc_distribution_mapped = MapTransform.create("dwc_distribution_mapped", dwc_distribution_reidentify.output, DistributionSchema(), {
         'taxonID': 'mappedTaxonID',
+        'locationID': MapTransform.choose('ala_locationID', 'locationID'),
+        'locality': MapTransform.choose('ala_locality', 'locality'),
+        'countryCode': MapTransform.choose('ala_countryCode', 'countryCode'),
+        'establishmentMeans': 'occurrenceStatus',
         'datasetID': MapTransform.default('datasetID')
-    }, auto=True)
+    })
     dwc_distribution_output = CsvSink.create("distribution_output", dwc_distribution_mapped.output, "distribution.csv", "excel", reduce=True)
 
     dwc_meta = MetaFile.create('dwc_meta', taxon_output, vernacular_output, dwc_distribution_output)
@@ -227,10 +245,12 @@ def reader() -> Orchestrator:
                                     accepted_languages,
                                     taxonomic_status_map,
                                     nomenclautural_code_map,
-                                    col_use_predciate,
+                                    col_use_predicate,
                                     col_location_predicate,
                                     taxon_source,
-                                    taxon_source_reference,
+                                    taxon_with_kingdom,
+                                    taxon_base,
+                                    taxon_used_reference,
                                     distribution_source,
                                     col_filter_predicate,
                                     taxon_use,
@@ -250,6 +270,7 @@ def reader() -> Orchestrator:
                                     vernacular_output,
                                     location_map,
                                     location,
+                                    distribution_identified,
                                     distribution_location_id,
                                     dwc_distribution,
                                     dwc_distribution_reidentify,

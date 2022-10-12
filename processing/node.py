@@ -12,6 +12,7 @@
 #   rights and limitations under the License.
 
 import datetime
+import gc
 import logging
 import os
 import tempfile
@@ -50,6 +51,7 @@ class Node:
     break_begin: bool = attr.ib(default=False, kw_only=True)
     break_commit: bool = attr.ib(default=False, kw_only=True)
     fail_on_exception: bool = attr.ib(default=False, kw_only=True)
+    post_gc: bool = attr.ib(default=False, kw_only=True)
     counts: Dict[str, int] = attr.ib(factory=dict, kw_only=True)
 
     def __attrs_post_init__(self):
@@ -88,7 +90,7 @@ class Node:
         message = [str(self.counts.get(key, 0)) + (" records " + speed if key == self.PROCESSED_COUNT else " ") + key for key in count_order]
         self.logger.info(", ".join(message))
 
-    def count(self, key: str, record: Record, context: ProcessingContext):
+    def count(self, key: str, record: Record, context: ProcessingContext, increment: int = 1):
         """
         Count the number of records processed
 
@@ -97,7 +99,7 @@ class Node:
         :param context: The processing context
         """
         val = self.counts.get(key, 0)
-        val += 1
+        val += increment
         self.counts[key] = val
         if (key == self.PROCESSED_COUNT and val % context.log_interval == 0):
             self.report(context)
@@ -114,6 +116,15 @@ class Node:
         self._started = datetime.datetime.utcnow()
         if self.break_begin:
             self.logger.info("Break at begin") # Put a breakpoint here if you want to break during debugging for this node
+
+    def _post_gc(self):
+        """
+        If enabled, do a post-execution GC
+        """
+        if self.post_gc:
+            self.logger.info(f"Garbage collecting - {gc.get_count()}")
+            gc.collect()
+            self.logger.info(f"Post garbage collecting - {gc.get_count()}")
 
     def commit(self, context: ProcessingContext):
         """
@@ -134,6 +145,7 @@ class Node:
             context.parent.merge(context)
         if self.break_commit:
             self.logger.info("Break at commit") # Put a breakpoint here if you want to break during debugging for this node
+        self._post_gc()
         self.logger.removeHandler(context.handler)
 
     def rollback(self, context: ProcessingContext):
@@ -147,6 +159,7 @@ class Node:
         """
         self.report(context)
         self.logger.warning("Rolling back %s", self.id)
+        self._post_gc()
         self.logger.removeHandler(context.handler)
 
     def execute(self, context: ProcessingContext):
@@ -331,7 +344,7 @@ class ProcessingContext(Node):
             self.logger.error("Dataset for port %s - %s is already set", id, str(port.roles))
             self.count(self.ERROR_COUNT, None, self)
             if self.fail_on_error:
-                raise ValueError("Dataset for " + id + " with roles " + port.roles + " is already set")
+                raise ValueError("Dataset for " + id + " with roles " + str(port.roles) + " is already set")
         self.datasets[id] = dataset
 
     def available(self, port: Port):
@@ -438,3 +451,13 @@ class ProcessingContext(Node):
                 value = default
         return value
 
+class NullNode(Node):
+    """
+    A placeholder node that does nothing
+    """
+    @classmethod
+    def create(cls, id):
+        return NullNode(id)
+
+    def execute(self, context: ProcessingContext):
+        pass
