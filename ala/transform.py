@@ -160,6 +160,7 @@ class CollectorySource(Source):
     def execute(self, context: ProcessingContext):
         output = Dataset.for_port(self.output)
         errors = Dataset.for_port(self.error)
+        record = None
         try:
             dr = context.get_default('datasetID')
             url = self.service + "/dataResource/" + dr

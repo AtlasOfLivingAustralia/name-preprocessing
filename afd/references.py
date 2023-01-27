@@ -42,7 +42,7 @@ class PublicationTransform(LookupTransform):
         output = Port.port(FormattedPublicationSchema())
         input_keys = Keys.make_keys(input.schema, input_keys)
         lookup_keys = Keys.make_keys(input.schema, lookup_keys)
-        return PublicationTransform(id, input, input, output, None, input_keys, lookup_keys, **kwargs)
+        return PublicationTransform(id, input, input, output, None, input_keys, lookup_keys, None, None, **kwargs)
 
     def _get_part(self, record: Record, parent: Record, key: str) -> str:
         val = None
@@ -145,7 +145,7 @@ class ReferenceTransform(LookupTransform):
         output = Port.port(FormattedReferenceSchema())
         input_keys = Keys.make_keys(references.schema, input_keys)
         lookup_keys = Keys.make_keys(publications.schema, lookup_keys)
-        return ReferenceTransform(id, references, publications, output, None, input_keys, lookup_keys, **kwargs)
+        return ReferenceTransform(id, references, publications, output, None, input_keys, lookup_keys, None, None, **kwargs)
 
     def compose(self, reference: Record, publication: Record, context: ProcessingContext, additional):
        ref: str = publication.namePublishedIn

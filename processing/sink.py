@@ -156,7 +156,9 @@ class CsvSink(Sink):
          dataset = context.acquire(self.input)
          fields = self.reduced_fields(context)
          keys = list(map(lambda name: self.fieldkeys.get(name, name), fields))
-         with open(context.locate_output_file(self.file, self.work), "w") as ofile:
+         file = context.locate_output_file(self.file, self.work)
+         self.logger.info(f"Writing to {file}")
+         with open(file, "w") as ofile:
             writer = csv.DictWriter(ofile, keys, dialect=self.dialect)
             writer.writeheader()
             for row in dataset.rows:

@@ -58,10 +58,10 @@ class CaabToDwcTaxonTaxonTransform(ReferenceTransform):
             'taxonID': taxonID,
             'parentNameUsageID': str(parent.SPCODE) if parent is not None else None,
             'datasetID': context.get_default('datasetID'),
-            'nomenclaturalCode': context.get_default('nomenclaturalCode'),
+            'nomenclaturalCode': choose(record.nomenclaturalCode, context.get_default('nomenclaturalCode')),
             'scientificName': normalise_spaces(scientificName),
             'scientificNameAuthorship': record.AUTHORITY,
-            'kingdom': record.KINDOM,
+            'kingdom': record.KINGDOM,
             'phylum': record.PHYLUM,
             'subphylum': record.SUBPHYLUM,
             'class': record.CLASS,
@@ -77,7 +77,8 @@ class CaabToDwcTaxonTaxonTransform(ReferenceTransform):
             'taxonRank': choose(record.RANK, 'unknown'),
             'taxonConceptID': taxonID,
             'taxonomicStatus': self.taxonomicStatus,
-            'nomenclaturalStatus': None
+            'nomenclaturalStatus': None,
+            'taxonomicFlags': record.taxonomicFlags
         }
         errors = self.output.schema.validate(dwc)
         if errors:
@@ -118,12 +119,13 @@ class CaabToDwcTaxonSynonymTransform(ThroughTransform):
             'taxonID': taxonID,
             'acceptedNameUsageID': str(record.SPCODE),
             'datasetID': context.get_default('datasetID'),
-            'nomenclaturalCode': context.get_default('nomenclaturalCode'),
+            'nomenclaturalCode': choose(record.nomenclaturalCode, context.get_default('nomenclaturalCode')),
             'scientificName': normalise_spaces(scientificName),
             'taxonRank': choose(record.RANK, "unknown"),
             'taxonConceptID': taxonID,
             'taxonomicStatus': self.taxonomicStatus,
-            'nomenclaturalStatus': None
+            'nomenclaturalStatus': None,
+            'taxonomicFlags': record.taxonomicFlags
         }
         errors = self.output.schema.validate(dwc)
         if errors:

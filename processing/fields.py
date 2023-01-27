@@ -56,3 +56,6 @@ class URL(_NoneMixin, fields.URL):
 
 class UUID(_NoneMixin, fields.UUID):
     pass
+
+class List(_NoneMixin, fields.List):
+    pass

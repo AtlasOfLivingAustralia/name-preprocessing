@@ -10,7 +10,7 @@
 #   WITHOUT WARRANTY OF ANY KIND, either express or
 #   implied. See the License for the specific language governing
 #   rights and limitations under the License.
-
+import contextvars
 import datetime
 import gc
 import logging
@@ -22,6 +22,7 @@ import attr
 
 from processing.dataset import Port, Dataset, Record
 
+_CURRENT_ORCHESTRATOR = contextvars.ContextVar('current_orchestrator', default=None)
 
 class ProcessingException(Exception):
     pass
@@ -57,6 +58,9 @@ class Node:
     def __attrs_post_init__(self):
         self.init_logger()
         self.label_ports()
+        orchestrator = _CURRENT_ORCHESTRATOR.get()
+        if orchestrator is not None:
+            orchestrator.add(self)
 
     def init_logger(self):
         if (self.logger is None):
@@ -388,7 +392,7 @@ class ProcessingContext(Node):
         dataset = self.acquire(port)
         return dataset is not None and dataset.rows
 
-    def locate_input_file(self, name: str):
+    def locate_input_file(self, name: str, include_output: bool = False):
         """
         Locate an input file from possible locations.
 
@@ -399,7 +403,8 @@ class ProcessingContext(Node):
 
         :return: The path to the file
         """
-        paths = [self.input_dir] + self.config_dirs + [self.work_dir]
+        paths = [self.output_dir] if include_output else []
+        paths = paths + [self.input_dir] + self.config_dirs + [self.work_dir]
         for dir in paths:
             test = os.path.join(dir, name)
             if os.path.exists(test):

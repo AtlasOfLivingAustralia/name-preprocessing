@@ -73,7 +73,7 @@ def reader():
     vernacular_status_file = "Vernacular_Status.csv"
     vernacular_status_schema = VernacularStatusSchema()
     location_file = "Location.csv"
-    location_map_file = "Location_Map.csv"
+    location_map_file = "Location_Lookup.csv"
     location_schema = LocationSchema()
     location_map_schema = LocationMapSchema()
     distribution_schema = DistributionSchema()
@@ -111,7 +111,7 @@ def reader():
     dwc_synonym = SynonymToDwcTaxonTransform.create("dwc_synonym", synonym_name.output, taxon_rank_lookup.output, 'TAXON_ID', 'TAXON_ID')
     dwc_misapplied = SynonymToDwcTaxonTransform.create("dwc_misapplied", misapplied_name.output, taxon_rank_lookup.output, 'TAXON_ID', 'TAXON_ID')
     dwc_taxon_merged = MergeTransform.create("dwc_taxon_merge", dwc_accepted.output, dwc_synonym.output, dwc_misapplied.output, fail_on_exception=True)
-    dwc_taxon_parents = DwcTaxonParent.create("dwc_taxon_parents", dwc_taxon_merged.output, 'taxonID', 'parentNameUsageID', 'acceptedNameUsageID', 'scientificName', 'taxonRank')
+    dwc_taxon_parents = DwcTaxonParent.create("dwc_taxon_parents", dwc_taxon_merged.output, 'taxonID', 'parentNameUsageID', 'acceptedNameUsageID', 'scientificName', 'scientificNameAuthorship', 'taxonRank')
     dwc_taxon_coded = LookupTransform.create("taxon_coded", dwc_taxon_parents.output, nomenclatural_code_map.output, 'kingdom', 'kingdom', overwrite=True)
     dwc_taxon_output = CsvSink.create("dwc_taxon_output", dwc_taxon_coded.output, "taxon.csv", "excel")
 
@@ -144,7 +144,7 @@ def reader():
 
     location = CsvSource.create("location", location_file, "ala", location_schema)
     location_map = CsvSource.create("location_map", location_map_file, "ala", location_map_schema)
-    distribution = DenormaliseTransform.create('distribution', taxon_source.output, 'STATE', ',')
+    distribution = DenormaliseTransform.delimiter('distribution', taxon_source.output, 'STATE', ',')
     distribution_linked = LookupTransform.create('distribution_linked', distribution.output, dwc_taxon_coded.output, 'TAXON_GUID_ID', 'taxonID', reject=True)
     dwc_distribution_base = MapTransform.create('distribution_dwc', distribution_linked.output, distribution_schema, {
         'taxonID': 'taxonID',

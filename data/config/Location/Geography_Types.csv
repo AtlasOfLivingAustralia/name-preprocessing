@@ -1,4 +1,22 @@
 type,include,parent,geographyType
+# Supplied type,include in results (true,false,bbox),include as parent in results (true, false, bbox),mapped type
+# Default values
+world,true,true,world
+continent,true,true,continent
+ocean,true,true,ocean
+region,true,true,region
+country,true,true,country
+sea,true,true,sea
+stateProvince,true,true,stateProvince
+waterBody,true,true,waterBody
+gulf,true,true,gulf
+bay,true,true,bay
+islandGroup,true,true,islandGroup
+island,true,true,island
+county,true,true,county
+municipality,true,true,municipality
+other,true,true,other
+# Location types from the Getty Thesaurus of Geographic Names
 "10001/miscellaneous",false,false,other
 "10002/hierarchy root",false,false,other
 "10003/facet",false,false,other
@@ -208,16 +226,16 @@ type,include,parent,geographyType
 "21117/dry lake",false,false,
 "21118/intermittent lake",false,false,
 "21119/pool",false,false,
-"21120/cove",false,false,
+"21120/cove",false,false,waterBody
 "21121/bay",bbox,bbox,waterBody
-"21122/fiord",false,false,
+"21122/fiord",false,false,waterBody
 "21123/gulf",true,true,waterBody
 "21124/harbor",false,false,
-"21125/lagoon",false,false,
+"21125/lagoon",false,false,waterBody
 "21126/spring",false,false,
-"21127/bight",false,false,
-"21128/inlet",false,false,
-"21129/sound",false,false,
+"21127/bight",false,false,waterBody
+"21128/inlet",false,false,waterBody
+"21129/sound",false,false,waterBody
 "21130/tidal watercourse",false,false,
 "21131/passage",bbox,true,waterBody
 "21132/strait",bbox,true,waterBody
@@ -230,8 +248,8 @@ type,include,parent,geographyType
 "21145/icecap depression",false,false,
 "21146/snowfield",false,false,
 "21147/ice sheet",false,false,
-"21151/channel",false,false,
-"21152/estuary",false,false,
+"21151/channel",false,false,waterBody
+"21152/estuary",false,false,waterBody
 "21153/meander",false,false,
 "21155/riverbank",false,false,
 "21156/river mouth(s)",false,false,
@@ -390,7 +408,7 @@ type,include,parent,geographyType
 "21647/tree",false,false,
 "21651/clearing",false,false,
 "21652/scrubland",false,false,
-"22101/general region",true,true,stateProvince
+"22101/general region",false,true,region
 "22201/inhabited region",false,false,
 "23118/undersea slope",false,false,
 "23172/undersea knoll",false,false,
@@ -706,8 +724,8 @@ type,include,parent,geographyType
 "55001/agricultural land",false,false,
 "55111/forest reserve",false,false,
 "80002/political entity",false,false,
-"80003/dependent political entity",true,true,stateProvince
-"80005/semi-independent political entity",true,true,stateProvince
+"80003/dependent political entity",true,true,region
+"80005/semi-independent political entity",true,true,region
 "80006/independent political entity",false,false,
 "81002/primary political unit",false,false,
 "81003/empire",false,false,
@@ -723,14 +741,14 @@ type,include,parent,geographyType
 "81014/tribal entity",false,false,
 "81021/dependent state",true,true,country
 "81022/organization",false,false,
-"81030/group of nations/states/cities",false,true,country
-"81031/former group of nations/states/cities",false,true,country
+"81030/group of nations/states/cities",false,true,region
+"81031/former group of nations/states/cities",false,true,region
 "81051/island nation",true,true,country
 "81099/administrative division",false,true,
 "81100/first level subdivision",false,true,
 "81101/area",false,true,other
 "81102/country",true,true,country
-"81103/bailiwick",false,false,country
+"81103/bailiwick",false,false,region
 "81104/autonomous municipality",false,false,municipality
 "81105/canton",false,false,
 "81106/city-state",false,false,
@@ -749,14 +767,14 @@ type,include,parent,geographyType
 "81120/local district",false,false,county
 "81121/dependency",false,false,
 "81122/local region",false,false,county
-"81123/national region",true,true,stateProvince
+"81123/national region",true,true,region
 "81124/autonomous district",true,true,stateProvince
 "81125/national district",true,true,stateProvince
 "81126/national division",true,true,stateProvince
 "81128/senatorial district",false,false,
 "81129/land grant",false,false,
 "81130/raion",false,false,
-"81131/region (geographic)",true,true,stateProvince
+"81131/region (geographic)",false,true,region
 "81141/march",false,false,
 "81142/deme",false,false,
 "81145/oblast",true,true,stateProvince
@@ -1033,3 +1051,209 @@ type,include,parent,geographyType
 "85101/border (boundary)",false,false,
 "85102/boundary marker",false,false,
 "85103/tollgate/barrier",false,false,
+# Location types from marineregions.org
+"Natura 2000 Site of Community Importance (SCI, EU Habitats Directive)",true,true,other
+"Natura 2000 Special Protection Area (SPA, EU Birds Directive)",true,true,other
+"Natura 2000 Special Protection Area and Site of Community Importance (SPA and SCI, EU Birds and Habitats Directive)",true,true,other
+Abyssal Plain,true,true,region
+Abyssal Provinces,true,true,region
+Anchorage,true,true,waterBody
+Archipelago,true,true,islandGroup
+Arctic Marine Area,true,true,region
+Area,true,true,other
+Arrondissement,true,true,municipality
+Atoll,true,true,island
+Autonomous Region,true,true,stateProvince
+Bank,true,true,waterBody
+Bar,true,true,waterBody
+Basin,true,true,waterBody
+Bay,true,true,waterBody
+Beach,true,true,waterBody
+Beacon,true,true,other
+Bight,true,true,waterBody
+Borough,true,true,municipality
+Bridge,true,true,other
+Caldera,true,true,other
+Canal,true,true,waterBody
+Canton,true,true,stateProvince
+Canyon(s),true,true,other
+Cape,true,true,waterBody
+Cave,true,true,other
+Channel,true,true,waterBody
+City,true,true,municipality
+Cliffs,true,true,other
+Coast,true,true,waterBody
+Commune,true,true,municipality
+Continent,true,true,continent
+Continental Shelf (Physical),true,true,region
+Continental Slope,true,true,region
+Contourite Depositional System,true,true,region
+Country,true,true,country
+County,true,true,county
+Cove,true,true,waterBody
+Creek,true,true,waterBody
+Current,true,true,waterBody
+Deelgemeente,true,true,municipality
+Deep,true,true,waterBody
+Delta,true,true,waterBody
+Department,true,true,stateProvince
+Dependency,true,true,country
+Dependent State,true,true,country
+Dike,true,true,other
+Disputed Territory,true,true,other
+District,true,true,stateProvince
+Diving spot,true,true,waterBody
+Division,true,true,stateProvince
+Dock,true,true,waterBody
+EEZ,true,true,waterBody
+Entrance,true,true,waterBody
+Escarpment,true,true,other
+Estuary,true,true,waterBody
+FADA Faunistic Regions,true,true,other
+FAO Divisions,true,true,other
+FAO Major Marine Fishing Areas,true,true,waterBody
+FAO Subareas,true,true,region
+FAO Subdivisions,true,true,region
+FAO fishing area,true,true,waterBody
+Field,true,true,other
+Firth,true,true,waterBody
+Fjord,true,true,waterBody
+Flat,true,true,other
+Floristic Region,true,true,region
+Forest,true,true,other
+Former Nation,true,true,country
+Former administrative division,true,true,stateProvince
+Fort,true,true,other
+Fracture Zone,true,true,waterBody
+Front,true,true,waterBody
+General Region,false,true,region
+General Sea Area,false,true,waterBody
+Governorate,true,true,stateProvince
+Gulf,true,true,waterBody
+Guyot,true,true,waterBody
+Harbour,true,true,waterBody
+Head,true,true,waterBody
+Headland,true,true,waterBody
+High Seas,true,true,waterBody
+Hill(s),true,true,other
+ICES Ecoregion,true,true,other
+IHO Sea Area,true,true,waterBody
+IOS region,true,true,other
+Ice Sheet,true,true,other
+Ice Shelf,true,true,other
+Inhabited Place,true,true,other
+Inlet,true,true,waterBody
+Island,true,true,island
+Island Group,true,true,islandGroup
+Isthmus,true,true,other
+Italian marine biogeographic sector,true,true,waterBody
+Joint regime (EEZ),true,true,waterBody
+Knoll(s),true,true,waterBody
+Lagoon,true,true,waterBody
+Lake,true,true,waterBody
+Land,true,true,other
+Landscape Protection Area,true,true,other
+Large Marine Ecosystem,true,true,waterBody
+Light(house),true,true,other
+Longhurst Province,true,true,waterBody
+Lower Bathyal Provinces,true,true,waterBody
+MSFD Marine regions,true,true,waterBody
+MSFD Marine subregions,true,true,waterBody
+Mangrove,true,true,other
+Marine Bioregion,true,true,waterBody
+Marine Ecoregion of the World (MEOW),true,true,waterBody
+Marine Park,true,true,waterBody
+Marine Protected Area (MPA),true,true,waterBody
+Marine Province,true,true,waterBody
+Marine Region,true,true,waterBody
+Marine Subregion,true,true,waterBody
+Mount,true,true,other
+Mountain range,true,true,other
+Mountain(s),true,true,other
+Mud Flat,true,true,other
+Mud Volcano,true,true,other
+Municipality,true,true,municipality
+Nation,true,true,country
+National District,true,true,stateProvince
+National Division,true,true,stateProvince
+National Park,true,true,other
+Natural Reserve,true,true,other
+OSPAR Region,true,true,waterBody
+Oblast,true,true,stateProvince
+Occupied Territory,true,true,other
+Ocean,true,true,waterBody
+Overlapping claim,true,true,other
+Overseas Territory,true,true,country
+Parish,true,true,municipality
+Pass,true,true,other
+Passage,true,true,waterBody
+Peninsula,true,true,other
+Pit,true,true,other
+Plain,true,true,other
+Plateau,true,true,other
+Point,true,true,waterBody
+Polder,true,true,waterBody
+Possession,true,true,stateProvince
+Prefecture,true,true,stateProvince
+Prodelta,true,true,waterBody
+Protected Area,true,true,other
+Province (administrative),true,true,stateProvince
+Realm,true,true,country
+Reef,true,true,waterBody
+Region,true,true,stateProvince
+Republic,true,true,country
+Reservoir,true,true,waterBody
+Ridge,true,true,other
+Rise,true,true,other
+River,true,true,waterBody
+Rock,true,true,other
+Rocks,true,true,other
+Salt Marsh,true,true,waterBody
+Sandbank,true,true,waterBody
+Sandbank System,true,true,waterBody
+Sea,true,true,sea
+SeaVoX SeaArea - level 2,true,true,waterBody
+SeaVoX SeaArea - region,true,true,waterBody
+SeaVoX SeaArea - sub-region,true,true,waterBody
+Seachannel,true,true,waterBody
+Seamount Chain,true,true,waterBody
+Seamount(s),true,true,waterBody
+Shelf,true,true,waterBody
+Shoal,true,true,waterBody
+Slope,true,true,waterBody
+Sluice,true,true,waterBody
+Sound,true,true,waterBody
+Spur,true,true,other
+State,true,true,stateProvince
+Station,true,true,other
+Strait,true,true,waterBody
+Stream,true,true,waterBody
+Sub-Province,true,true,stateProvince
+Submarine lava tube,true,true,other
+Submarine valley(s),true,true,waterBody
+Swale,true,true,other
+Swamp,true,true,other
+TDWG,true,true,other
+TDWG - level 1,true,true,continent
+TDWG - level 2,true,true,region
+TDWG - level 3,true,true,country
+TDWG - level 4,true,true,stateProvince
+Tablemount,true,true,other
+Territorial Sea,true,true,sea
+Territory,true,true,stateProvince
+Tower,true,true,other
+Town,true,true,municipality
+Trench,true,true,waterBody
+Tributary,true,true,waterBody
+Trough,true,true,waterBody
+Union Territory,true,true,other
+Unitary Authority,true,true,other
+Village,true,true,municipality
+Ward,true,true,other
+Water mass,true,true,waterBody
+Watsonian vice-county,true,true,county
+Wetland,true,true,waterBody
+Wetland of International Importance (Ramsar Convention),true,true,waterBody
+World,true,true,world
+World Marine Heritage Site,true,true,waterBody
+Wreck,true,true,other
