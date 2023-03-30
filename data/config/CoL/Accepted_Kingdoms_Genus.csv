@@ -1,0 +1,10 @@
+kingdom,taxonID,useDistribution,useDataset,useRank
+# For use with genus-level data
+Animalia,N,false,false,true
+Archaea,R,false,false,false
+Bacteria,B,false,false,false
+Chromista,C,false,false,false
+Fungi,F,false,false,true
+Plantae,P,false,false,true
+Protozoa,Z,false,false,false
+Viruses,V,false,false,false

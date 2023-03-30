@@ -71,7 +71,7 @@ def clean_rank(s: str):
     return s
 
 def reader() -> Orchestrator:
-    taxon_file = "caab_species.xlsx"
+    taxon_file = "caab_dump.csv"
     nomenclatural_code_file = "Nomenclatural_Code_Map.csv"
     scientific_name_status_file = "Scientific_Name_Patterns.csv"
     caab_schema = CaabSchema()
@@ -80,7 +80,7 @@ def reader() -> Orchestrator:
 
     nomenclatural_code_map = CsvSource.create("nomenclatural_code_map", nomenclatural_code_file, "ala", caab_nomenclatural_code_schema)
     name_patterns = CsvSource.create("name_patterns", scientific_name_status_file, 'excel', scientific_name_status_schema)
-    taxon_source = ExcelSource.create("taxon_source", taxon_file, None, caab_schema, no_errors=False)
+    taxon_source = CsvSource.create("taxon_source", taxon_file, "excel", caab_schema, encoding='utf-8-sig', no_errors=True)
     taxon_current = FilterTransform.create("taxon_current", taxon_source.output, is_current_taxon)
     taxon_clean = MapTransform.create("taxon_clean",  taxon_current.output, caab_schema, {
         'SCIENTIFIC_NAME': (lambda r: clean_scientific(r.SCIENTIFIC_NAME)),
@@ -105,8 +105,8 @@ def reader() -> Orchestrator:
         'RANK': (lambda r: clean_rank(r.RANK))
     }, auto=True)
     taxon_coded = LookupTransform.create('taxon_coded', taxon_clean.output, nomenclatural_code_map.output, 'KINGDOM', 'kingdom', record_unmatched=True)
-    synonyms = DenormaliseTransform.create("synonyms", taxon_coded.output, 'RECENT_SYNONYMS', '|', include_empty=False)
-    vernacular = DenormaliseTransform.create("vernacular", taxon_coded.output, 'COMMON_NAMES_LIST', '|', include_empty=False)
+    synonyms = DenormaliseTransform.delimiter("synonyms", taxon_coded.output, 'RECENT_SYNONYMS', '|', include_empty=False)
+    vernacular = DenormaliseTransform.delimiter("vernacular", taxon_coded.output, 'COMMON_NAMES_LIST', '|', include_empty=False)
     dwc_accepted = CaabToDwcTaxonTaxonTransform.create("dwc_accepted", taxon_coded.output, taxon_clean.output, 'SPCODE', 'PARENT_ID', taxonomicStatus='accepted', allow_unmatched=True)
     dwc_synonym = CaabToDwcTaxonSynonymTransform.create("dwc_synonym", synonyms.output, taxonomicStatus='synonym')
     dwc_synonym_status = DwcScientificNameStatus.create('dwc_synonym_status', dwc_synonym.output, name_patterns.output)

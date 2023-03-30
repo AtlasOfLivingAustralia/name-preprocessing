@@ -1,5 +1,7 @@
 locationID,name,geographyType
 # Re-typing of elements where the TGN doesn't reflect usage in the ALA
+# The world
+7029392,"World",world
 # Island groups
 1009947,"Conflict Group",islandGroup
 1010216,"Pilas Group",islandGroup

@@ -26,6 +26,7 @@ from processing.transform import Predicate
 
 csv.field_size_limit(sys.maxsize)
 
+
 @attr.s
 class Source(Node):
     output: Port = attr.ib()
@@ -51,12 +52,38 @@ class Source(Node):
     def vertex_color(self, context: ProcessingContext):
         return 'lightcyan'
 
+
+@attr.s(auto_attribs=True)
+class NullSource(Source):
+    """A source that generates nothing"""
+
+    @classmethod
+    def create(cls, id: str, schema: marshmallow.Schema, **kwargs):
+        """Create a null source
+
+        :param id: The identifier of the node
+        :param schema: The notional schema to use
+        :param kwargs: Any keyword arguments
+        :return:
+        """
+        source = Port.port(schema)
+        error = Port.error_port(schema)
+        return NullSource(id, source, error, **kwargs)
+
+    def execute(self, context: ProcessingContext):
+        dataset = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        context.save(self.output, dataset)
+        context.save(self.error, errors)
+
+
 @attr.s(auto_attribs=True)
 class CsvSource(Source):
     file: path
     dialect: str
     encoding: str = attr.ib(default='utf-8', kw_only=True)
     comment: str = attr.ib(default='#', kw_only=True)
+    search_output: bool = attr.ib(default=False, kw_only=True)
 
     @classmethod
     def create(cls, id: str, file: path, dialect: str, schema: marshmallow.Schema, **kwargs):
@@ -72,9 +99,10 @@ class CsvSource(Source):
                 yield row
 
     def execute(self, context: ProcessingContext):
-         dataset = Dataset.for_port(self.output)
-         errors = Dataset.for_port(self.error)
-         with open(context.locate_input_file(self.file), "r", encoding=self.encoding) as ifile:
+        dataset = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        filename = context.locate_input_file(self.file, self.search_output)
+        with open(filename, "r", encoding=self.encoding) as ifile:
             reader = csv.DictReader(self.decomment(ifile), dialect=self.dialect)
             line = 1
             for row in reader:
@@ -91,8 +119,9 @@ class CsvSource(Source):
                     self.count(self.ERROR_COUNT, error, context)
                 self.count(self.PROCESSED_COUNT, None, context)
                 line += 1
-         context.save(self.output, dataset)
-         context.save(self.error, errors)
+        context.save(self.output, dataset)
+        context.save(self.error, errors)
+
 
 @attr.s(auto_attribs=True)
 class ExcelSource(Source):
@@ -108,7 +137,8 @@ class ExcelSource(Source):
     def execute(self, context: ProcessingContext):
         dataset = Dataset.for_port(self.output)
         errors = Dataset.for_port(self.error)
-        wb = openpyxl.load_workbook(context.locate_input_file(self.file), read_only=False, keep_vba=False, data_only=True, keep_links=False)
+        wb = openpyxl.load_workbook(context.locate_input_file(self.file), read_only=False, keep_vba=False,
+                                    data_only=True, keep_links=False)
         sheetname = self.sheet if self.sheet else wb.get_sheet_names()[0]
         sheet = wb[sheetname]
         rows = sheet.values
@@ -117,7 +147,7 @@ class ExcelSource(Source):
         try:
             while True:
                 row = next(rows)
-                row = { columns[j]: (row[j] if row[j] else '') for j in range(len(row)) }
+                row = {columns[j]: (row[j] if row[j] else '') for j in range(len(row))}
                 try:
                     value = Record(line, self.output.schema.load(row), None)
                     if self.predicate is None or self.predicate(value):

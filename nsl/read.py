@@ -89,7 +89,7 @@ def reader() -> Orchestrator:
     taxonomic_status_map_file = "Taxonomic_Status_Map.csv"
     nomenclatural_code_map_file = "Nomenclatural_Code_Map.csv"
     establishment_means_map_file = "Establishment_Means_Map.csv"
-    location_map_file = "Location_Map.csv"
+    location_map_file = "Location_Lookup.csv"
     location_file = "Location.csv"
     vernacular_status_file = "Vernacular_Status.csv"
     rank_map_file = "ranks.csv"
@@ -105,7 +105,7 @@ def reader() -> Orchestrator:
     location_schema = LocationSchema()
     vernacular_status_schema = VernacularStatusSchema()
 
-    taxon_source = CsvSource.create("taxon_source", taxon_file, "excel", taxon_schema, no_errors=False)
+    taxon_source = CsvSource.create("taxon_source", taxon_file, "excel", taxon_schema, no_errors=False, fail_on_exception=True)
     scientific_taxon = FilterTransform.create("scientific_taxon", taxon_source.output, is_scientific_taxon)
     rank_source = CsvSource.create("rank_source", rank_map_file, "ala", rank_map_schema)
     taxon_rank_lookup = LookupTransform.create("taxon_rank_lookup", scientific_taxon.output, rank_source.output, 'taxonRank', 'term', reject=True, record_unmatched=True, lookup_map={'taxonRank': 'mappedTaxonRank', 'taxonRankLevel': 'taxonRankLevel' })
@@ -154,7 +154,7 @@ def reader() -> Orchestrator:
     )
     dwc_identifier_output = CsvSink.create("dwc_identifier_output", dwc_identifier.output, "identifier.csv", "excel",reduce=True)
 
-    distribution = DenormaliseTransform.create('distribution', reference_taxon.output, 'taxonDistribution', ',')
+    distribution = DenormaliseTransform.delimiter('distribution', reference_taxon.output, 'taxonDistribution', ',')
     dwc_distribution_base = MapTransform.create('distribution_dwc', distribution.output, distribution_schema, {
         'taxonID': 'taxonID',
         'datasetID': MapTransform.default('datasetID'),

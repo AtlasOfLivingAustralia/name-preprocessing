@@ -70,7 +70,7 @@ def reader() -> Orchestrator:
     rank_file = "NZOR_Rank_Map.csv"
     language_file = "Language_Map.csv"
     nomenclatural_code_file = "Nomenclatural_Code_Map.csv"
-    location_map_file = "Location_Map.csv"
+    location_map_file = "Location_Lookup.csv"
     location_file = "Location.csv"
     nzor_taxon_schema = NzorTaxonSchema()
     nzor_vernacular_schema = NzorVernacularSchema()

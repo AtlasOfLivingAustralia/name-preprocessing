@@ -108,6 +108,7 @@ class ColAcceptedKingdomSchema(Schema):
     taxonID = fields.String()
     useDistribution = fields.Boolean()
     useDataset = fields.Boolean()
+    useRank = fields.Boolean()
 
 class ColAcceptedDatasetSchema(Schema):
     datasetID = fields.String()
@@ -121,3 +122,16 @@ class ColAcceptedLocationSchema(Schema):
 class ColAcceptedLanguageSchema(Schema):
     language = fields.String()
     code = fields.String()
+
+class ColAcceptedRankSchema(Schema):
+    taxonRank = fields.String()
+
+class MarineRegionsLocationMapSchema(Schema):
+    locationID = fields.String()
+    acceptedLocationID = fields.String()
+    locality = fields.String()
+    countryCode = fields.String()
+    originalLocality = fields.String()
+
+    class Meta:
+        ordered = True

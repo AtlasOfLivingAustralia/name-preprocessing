@@ -1,0 +1,14 @@
+geographyType,area,locationComments
+continent,20000000.0,Average size of continents (rounded)
+country,600000.0,Average size of country
+county,1000.0,
+island,1000.0,
+islandGroup,10000.0,
+municipality,100.0,
+ocean,26000000.0,Average size of oceans
+other,1.0,
+region,10000.0,
+sea,1000000.0,Average size of labelled seas
+stateProvince,50000.0,
+waterBody,50000.0,
+world,510000000.0,

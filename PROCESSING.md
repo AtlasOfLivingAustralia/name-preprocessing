@@ -208,6 +208,7 @@ Reads data from a CSV file.
 * **encoding**=str The file encoding. Defaults to `utf-8` but may need to be set to `utf-8-sig`
   to accomodate byte order marks at the start of the file.
 * **comment**=str The line start to that indicates a comment. Defaults to '#'
+* **search_output**=bool Look in an output directory for the file. Defaults to false
 * **predicate**=Callable A Record -> bool predicate for reading rows. The function is called
   with a single argument, the record representing the row, which can be used to eliminate
   unwanted rows from a large dataset before they become a memory problem.
@@ -517,7 +518,7 @@ relationships to break down. The resulting output has identifiers re-mapped.
 * **selector**:Callable An optional  function that takes the records in a cluster and returns one or more selected records.
   If first selected record is treated as the replacement for any non-selected records
   when parent and accepted keys are re-written.
-  If None, then the first record in the cluster is used.
+  If None, then all records in the cluster are returned
 * **identifier_keys** The keys that identify a record for parent/accepted rewriting
 * **parent_keys** The keys that identify a parent record. None if not used.
 * **accepted_keys** The keys that identify an accepted record. None if not used.

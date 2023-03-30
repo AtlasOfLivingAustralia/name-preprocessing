@@ -173,6 +173,7 @@ class DistributionSchema(Schema):
     occurrenceRemarks = fields.String(missing=None)
     datasetID = fields.String(missing=None)
     provenance = fields.String(missing=None, uri='http://purl.org/dc/terms/provenance')
+    locationRemarks = fields.String(missing=None)
 
     class Meta:
         ordered = True
@@ -220,6 +221,18 @@ class LocationMapSchema(Schema):
         uri = 'http://ala.org.au/terms/1.0/LocationName'
         namespace = 'http://rs.tdwg.org/dwc/terms/'
 
+class LocationIdentifierMapSchema(Schema):
+    locationID = fields.String()
+    identifier = fields.String(uri='http://purl.org/dc/terms/title')
+    locality = fields.String(missing=None)
+    mappedLocality = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/mappedLocality')
+    locationRemarks = fields.String(missing=None)
+
+    class Meta:
+        ordered = True
+        uri = 'http://ala.org.au/terms/1.0/LocationIdentifier'
+        namespace = 'http://rs.tdwg.org/dwc/terms/'
+
 class LocationSchema(Schema):
     """
     Schema for the output of a simple Darwin Core Occurrence
@@ -234,6 +247,7 @@ class LocationSchema(Schema):
     decimalLatitude = fields.Float(missing=None)
     decimalLongitude = fields.Float(missing=None)
     area = fields.Float(missing=None, uri='http://ala.org.au/terms/1.0/area')
+    weight = fields.Float(missing=None, uri='http://ala.org.au/bayesian/1.0/weight')
     locationRemarks = fields.String(missing=None)
 
     class Meta:

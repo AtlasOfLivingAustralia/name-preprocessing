@@ -52,17 +52,29 @@ class SourceSchema(Schema):
     countryCode = fields.String(missing=None)
     language = fields.String(missing=None)
 
+
 parser = argparse.ArgumentParser(description='Import natureshare data and convert into a DwC file')
 parser.add_argument('-d', '--directory', type=str, help='Base directory', default='.')
-parser.add_argument('-i', '--input', type=str, help='Input directory (if relative, then relative to the base directory)', default='input')
-parser.add_argument('-o', '--output', type=str, help='Output directory (if relative, then relative to the base directory)', default='output')
-parser.add_argument('-w', '--work', type=str, help='Work directory (if relative, then relative to the base directory)', default='work')
-parser.add_argument('-c', '--config', type=str, help='Configuration directory (if relative, then relative to the base directory)', default='config')
+parser.add_argument('-i', '--input', type=str,
+                    help='Input directory (if relative, then relative to the base directory)', default='input')
+parser.add_argument('-o', '--output', type=str,
+                    help='Output directory (if relative, then relative to the base directory)', default='output')
+parser.add_argument('-w', '--work', type=str, help='Work directory (if relative, then relative to the base directory)',
+                    default='work')
+parser.add_argument('-c', '--config', type=str,
+                    help='Configuration directory (if relative, then relative to the base directory)', default='config')
 parser.add_argument('-s', '--sources', type=str, help='File containing the source list', default='sources.csv')
 parser.add_argument('-v', '--verbose', help='Verbose logging', action='store_true', default=False)
 parser.add_argument('--dump', help='Dump datasets to the ', action='store_true', default=False)
-parser.add_argument('-x', '--clear', help='Clear the work directory before execution', action='store_true', default=False)
-parser.add_argument('--only', type=str, help='Comma separated list of source ids to execute. If absent, all are executed')
+parser.add_argument('--col-reference', help='Use the pre-build refrence dataset for Catalogue of Life',
+                    action='store_true', default=False)
+parser.add_argument('--col-genus',
+                    help='Collect all genera from the Catalogue of Life (if not set, only include certain kingdoms)',
+                    action='store_true', default=False)
+parser.add_argument('-x', '--clear', help='Clear the work directory before execution', action='store_true',
+                    default=False)
+parser.add_argument('--only', type=str,
+                    help='Comma separated list of source ids to execute. If absent, all are executed')
 
 args = parser.parse_args()
 
@@ -81,7 +93,8 @@ else:
     only_ids = set(map(lambda id: id.strip(), args.only.split(',')))
     source_filter = lambda r: r.id in only_ids or r.id == 'default'
 
-sources = CsvSource.create("sources", source_file, "ala", SourceSchema(), predicate=source_filter, fail_on_exception=True)
+sources = CsvSource.create("sources", source_file, "ala", SourceSchema(), predicate=source_filter,
+                           fail_on_exception=True)
 dummy = NullSink.create("dummy")
 selector = Selector.create(
     "selector",
@@ -99,7 +112,7 @@ selector = Selector.create(
     ala.read.vernacular_list_reader(),
     ausfungi.read.reader(),
     caab.read.reader(),
-    col.read.reader(),
+    col.read.reader(args.col_reference, args.col_genus),
     nsl.read.reader(),
     nsl.read.additional_reader(),
     nzor.read.reader(),
@@ -108,7 +121,9 @@ selector = Selector.create(
 )
 
 orchestator = Orchestrator('all', [sources, selector])
-defaults = { }
+defaults = {}
 
-context = ProcessingContext.create('all', dangling_sink_class=CsvSink, config_dirs=config_dirs, input_dir=input_dir, work_dir=work_dir, output_dir=output_dir, log_level=log_level, clear_work_dir=clear, defaults=defaults, dump=dump)
+context = ProcessingContext.create('all', dangling_sink_class=CsvSink, config_dirs=config_dirs, input_dir=input_dir,
+                                   work_dir=work_dir, output_dir=output_dir, log_level=log_level, clear_work_dir=clear,
+                                   defaults=defaults, dump=dump)
 orchestator.run(context)

@@ -1,3 +1,4 @@
-locationID,parentLocationID,acceptedLocationID,datasetID,geographyType,locality,countryCode,decimalLatitude,decimalLongitude,area
-http://ala.org.au/locations/country/Antarctica,,http://vocab.getty.edu/tgn/1000007,dr19606,country,Antarctica,AQ,-83.843,65.725,
-http://ala.org.au/locations/waterBody/Antarctica,,http://vocab.getty.edu/tgn/1000007,dr19606,waterBody,Antarctica,,-83.843,65.725,
+locationID,parentLocationID,acceptedLocationID,datasetID,geographyType,locality,countryCode,decimalLatitude,decimalLongitude,area,weight
+http://ala.org.au/locations/country/Antarctica,,http://vocab.getty.edu/tgn/1000007,dr19606,country,Antarctica,AQ,-83.843,65.725,,
+http://ala.org.au/locations/waterBody/Antarctica,,http://vocab.getty.edu/tgn/1000007,dr19606,waterBody,Antarctica,,-83.843,65.725,,
+http://ala.org.au/locations/islandGroup/SolomonArchipelago,http://vocab.getty.edu/tgn/7006160,,dr19606,islandGroup,Solomon Archipelago,,-9.467,159.817,,

@@ -15,7 +15,9 @@ import os.path
 from typing import Dict, List, Set
 
 import attr
+from marshmallow import Schema
 
+import processing
 from processing.dataset import Port, Keys, Record
 from processing.node import Node, ProcessingContext, ProcessingException
 
@@ -23,7 +25,6 @@ from processing.node import Node, ProcessingContext, ProcessingException
 @attr.s
 class Orchestrator(Node):
     nodes: List[Node] = attr.ib(factory=list)
-    completed: List[None] = attr.ib(factory=list)
 
     def report(self, context: ProcessingContext):
         self.logger.info("Executed")
@@ -37,8 +38,6 @@ class Orchestrator(Node):
         seen_nodes = set()
         dangling_nodes = []
         seen = set()
-        for node in self.completed:
-            seen.update(node.outputs().values())
         for node in self.nodes:
             seen.update(node.outputs().values())
             seen.update(node.errors().values())
@@ -65,9 +64,6 @@ class Orchestrator(Node):
         for node in self.nodes:
             if port in node.outputs().values() or port in node.errors().values():
                 return node
-        for node in self.completed:
-            if port in node.outputs().values() or port in node.errors().values():
-                return node
         return None
 
     def add(self, node: Node):
@@ -81,7 +77,7 @@ class Orchestrator(Node):
             if port not in inputs and context.has_data(port):
                 id = node.id + "_" + key
                 sink = dsc.create_in_context(id, port, context, tags={'generated': True}, no_errors=False)
-                self.logger.debug("Created sink " + sink.id)
+                self.logger.info("Created handling sink " + sink.id)
                 self.add(sink)
                 dangling.append(sink)
         return dangling
@@ -147,7 +143,7 @@ class Orchestrator(Node):
         super().begin(context)
         context.clear()
         for cd in context.config_dirs:
-            self.logger.debug("Configuraration directory " + str(cd))
+            self.logger.debug("Configuration directory " + str(cd))
         self.logger.debug("Input directory " + str(context.input_dir))
         self.logger.debug("Output directory " + str(context.output_dir))
         self.logger.debug("Work directory " + str(context.work_dir))
@@ -188,6 +184,15 @@ class Orchestrator(Node):
         invalid = [node.id for node in self.nodes if not node.is_executable(context)]
         if completed and len(invalid) > 0:
             raise ProcessingException(f"Unable to complete nodes {invalid}")
+
+    def __enter__(self):
+        current = processing.node._CURRENT_ORCHESTRATOR
+        self._parent_token = current.set(self)
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        current = processing.node._CURRENT_ORCHESTRATOR
+        current.reset(self._parent_token)
 
 @attr.s
 class Selector(Node):

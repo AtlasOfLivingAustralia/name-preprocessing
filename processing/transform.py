@@ -28,6 +28,7 @@ from marshmallow import Schema
 
 from processing import fields
 from processing.dataset import Port, Dataset, Record, Keys, Index, IndexType
+from processing.fields import String
 from processing.node import Node, ProcessingContext, ProcessingException
 
 HREF_MARKUP = re.compile(r'\s*<a [^>]*href\s*=\s*"([^"]*)"[^>]*>')
@@ -307,9 +308,9 @@ class LookupTransform(Transform):
     unmatched: Port = attr.ib()
     input_keys: Keys = attr.ib()
     lookup_keys: Keys = attr.ib()
+    input_map: Dict[str, str] = attr.ib()
+    lookup_map: Dict[str, str] = attr.ib()
     lookup_type: IndexType = attr.ib(default=IndexType.UNIQUE, kw_only=True)
-    input_map: Dict[str, str] = attr.ib(default=None)
-    lookup_map: Dict[str, str] = attr.ib(default=None)
     reject: bool = attr.ib(default=False, kw_only=True)
     merge: bool = attr.ib(default=True, kw_only=True)
     overwrite: bool = attr.ib(default=False, kw_only=True)
@@ -538,6 +539,8 @@ class MapTransform(ThroughTransform):
 
     @classmethod
     def create(cls, id: str, input: Port, schema: Schema, map: Dict[str, object], auto=False, **kwargs):
+        if schema is None:
+            schema = cls._build_schema(input.schema, map, auto)
         output = Port.port(schema)
         map = cls._build_map(input.schema, output.schema, map, auto)
         return MapTransform(id, input, output, None, map)
@@ -560,6 +563,16 @@ class MapTransform(ThroughTransform):
         :return: The capitalised version of that record
         """
         return lambda r: string.capwords(r.data[key]) if r.data[key] else None
+
+
+    @classmethod
+    def lowercase(cls, key):
+        """
+        Return a lowercase version of a value
+        :param key: The record key
+        :return: The lowercase version of that record
+        """
+        return lambda r: str(r.data[key]).lower() if r.data[key] else None
 
     @classmethod
     def default(cls, key):
@@ -670,6 +683,30 @@ class MapTransform(ThroughTransform):
     @classmethod
     def _getter(cls, name):
         return lambda r: r.data.get(name)
+
+    @classmethod
+    def _build_schema(cls, input: Schema, map: Dict[str, object], auto: bool):
+        """
+        Build an auto-schema based on the input and adding string fields for anything not recognised.
+
+
+        :param input: The input schema
+        :param map: The map giving the output fields in terms of the input fields.
+        :param auto: If true, then any matching field names are mapped automatically, with approriate type transformations
+
+        :return: An auto-generated schema
+        """
+        fields = OrderedDict()
+        if auto:
+            for (name, field) in input.fields.items():
+                fields[name] = field
+        for name in map.keys():
+            field = input.fields.get(name)
+            if field is not None:
+                fields[name] = field
+            else:
+                fields[name] = String(missing = None)
+        return Port.schema_from_dict(fields, ordered=True)()
 
     @classmethod
     def _build_map(cls, input: Schema, output: Schema, map: Dict[str, object], auto: bool):
@@ -833,13 +870,30 @@ class DenormaliseTransform(ThroughTransform):
     INVALID_COUNT = "invalid"
 
     field: str = attr.ib() # The field to split
-    delimiter: str = attr.ib() # The delimiter to use while splitting
+    expander: Callable = attr.ib() # The expander to use while splitting
     include_empty: bool = attr.ib(default=False, kw_only=True)
 
+
     @classmethod
-    def create(cls, id: str, input: Port, field: str, delimiter: str, **kwargs):
+    def expand(cls, id: str, input: Port, field: str, expander: Callable, **kwargs):
         """
-        Create a denomaliser
+        Create a denormaliser with an expansion function
+
+        :param id: The identifier
+        :param input: The input port
+        :param field: The field to denormalise
+        :param expander: The expansion function
+        :keyword include_empty: Include empty records (false by default)
+
+        :return: A denormalising transform
+        """
+        output = Port.port(input.schema)
+        return DenormaliseTransform(id, input, output, None, field, expander, **kwargs)
+
+    @classmethod
+    def delimiter(cls, id: str, input: Port, field: str, delimiter: str, **kwargs):
+        """
+        Create a denomaliser by splitting by a delimiter
 
         :param id: The identifier
         :param input: The input port
@@ -849,8 +903,16 @@ class DenormaliseTransform(ThroughTransform):
 
         :return: A denormalising transform
         """
-        output = Port.port(input.schema)
-        return DenormaliseTransform(id, input, output, None, field, delimiter, **kwargs)
+        expander = lambda r: cls._delimiter_expand(r, field, delimiter)
+        return cls.expand(id, input, field, expander, **kwargs)
+
+    @classmethod
+    def _delimiter_expand(cls, r: Record, field: str, delimiter: str):
+        value: str = r.data.get(field)
+        value = value.strip() if value is not None else None
+        if value is None or len(value) == 0:
+            return None
+        return str(value).split(delimiter)
 
     def execute(self, context: ProcessingContext):
         data = context.acquire(self.input)
@@ -860,26 +922,20 @@ class DenormaliseTransform(ThroughTransform):
         for record in data.rows:
             try:
                 self.count(self.PROCESSED_COUNT, record, context)
-                value: str = record.data.get(self.field)
-                value = value.strip() if value is not None else None
-                if value is None or len(value) == 0:
+                values = self.expander(record)
+                if values is None or len(values) == 0:
                     if self.include_empty:
                         result.add(record)
                         self.count(self.ACCEPTED_COUNT, record, context, 0)
                     continue
-                if value.find(self.delimiter) == -1:
-                    composed = self.compose(record, context, additional, value, 0)
-                    result.add(composed)
-                    self.count(self.ACCEPTED_COUNT, composed, context)
-                else:
-                    index = 0
-                    for v in value.split(self.delimiter):
-                        v = v.strip()
-                        if len(v) > 0:
-                            composed = self.compose(record, context, additional, v, index)
-                            result.add(composed)
-                            self.count(self.ACCEPTED_COUNT, composed, context)
-                            index += 1
+                index = 0
+                for v in values:
+                    v = v.strip()
+                    if len(v) > 0:
+                        composed = self.compose(record, context, additional, v, index)
+                        result.add(composed)
+                        self.count(self.ACCEPTED_COUNT, composed, context)
+                        index += 1
             except Exception as err:
                 if self.fail_on_exception:
                     raise err
@@ -1109,15 +1165,19 @@ class VariantTransform(ThroughTransform):
 class SortTransform(ThroughTransform):
     """
     Sort records by some sort of key expression
+
+    key: The key to sort on
+    reverse: Reverse sort order (False by default)
     """
 
     key: Callable = attr.ib()
+    reverse: bool = attr.ib(kw_only=True, default=False)
 
     @classmethod
-    def create(cls, id: str, input: Port, key):
+    def create(cls, id: str, input: Port, key, **kwargs):
         output = Port.port(input.schema)
         key = cls._build_key(key, input.schema)
-        return SortTransform(id, input, output, None, key)
+        return SortTransform(id, input, output, None, key, **kwargs)
 
     @classmethod
     def _build_key(cls, key, schema: Schema):
@@ -1133,12 +1193,21 @@ class SortTransform(ThroughTransform):
          return lambda r: key.get(r)
 
     def execute(self, context: ProcessingContext):
+        sig = signature(self.key)
+        nargs = len(sig.parameters)
+        if nargs == 1:
+            key = self.key
+        if nargs == 2:
+            key = lambda r: self.key(r, context)
+        elif nargs > 2:
+            raise ValueError("Can't handle a key with more than two arguments")
         data = context.acquire(self.input)
         result = Dataset.for_port(self.output)
         result.rows.extend(data.rows)
-        result.rows.sort(key=self.key)
-        self.count(self.ACCEPTED_COUNT, None, context, len(result.rows))
+        result.rows.sort(key=key, reverse=self.reverse)
+        self.count(self.PROCESSED_COUNT, None, context, len(result.rows))
         context.save(self.output, result)
+
 
 @attr.s
 class AcceptTransform(ThroughTransform):
@@ -1281,8 +1350,9 @@ class ClusterTransform(ThroughTransform):
             if self.selector:
                 cluster = self.selector((sig), cluster)
             for row in cluster:
-                id = self.identifier_keys.get(row)
-                remap[id] = id
+                if self.identifier_keys is not None:
+                    id = self.identifier_keys.get(row)
+                    remap[id] = id
                 used.append(row)
                 self.count(self.ACCEPTED_COUNT, row, context)
             if rejects is not None and len(cluster) < len(all):
@@ -1291,8 +1361,9 @@ class ClusterTransform(ThroughTransform):
                     if row not in cluster:
                         row = Record.copy(row)
                         row.data['_cluster_signature'] = str(sig)
-                        oldid = self.identifier_keys.get(row)
-                        remap[oldid] = id
+                        if self.identifier_keys is not None:
+                            oldid = self.identifier_keys.get(row)
+                            remap[oldid] = id
                         rejects.add(row)
                         self.count(self.REJECTED_COUNT, row, context)
         for row in used:
@@ -1340,3 +1411,107 @@ class NullTransform(ThroughTransform):
     def execute(self, context: ProcessingContext):
         source = context.acquire(self.input)
         context.save(self.output, source)
+
+@attr.s
+class ParentLookupTransform(LookupTransform):
+    """Look up a value but, if there is not a match, try the parent of the input record until something is found or there is no parent."""
+
+    PARENT_COUNT = 'parents'
+
+    identifier_keys: Keys = attr.ib()
+    parent_keys: Keys = attr.ib()
+
+    @classmethod
+    def create(cls, id: str, input: Port, lookup: Port, input_keys, lookup_keys, identifier_keys, parent_keys, **kwargs):
+        """
+        Construct a lookup transform that generates as ouput a joined port with the provided key
+
+        Which columns are included/excluded from the result are specified by the
+        input/lookup_map, _include and _exclude and lookup_prefix paremeters.
+        Anything explicitly mapped takes precedence over inclusion (which is a name-name map)
+        Exclusion only applies if there is no explicit inclusion
+        If the lookup_prefix is supplied, then that is a default addition to lookup columns.
+
+        :param id The transform id
+        :param input: The input port
+        :param lookup: The lookup port
+        :param input_keys: The (source) keys for the input record
+        :param lookup_keys: The (target) keys for the lookup
+        :param identifier_keys: The (source) identifier keys
+        :param parent_keys: The (source) parent keys
+        :keyword input_map: The columns to take (and rename) from the input
+        :keyword lookup_map: The columns to take (and rename) from the input
+        :keyword input_include: The columns to include from the input
+        :keyword lookup_include: The columns to include from the input
+        :keyword input_exclude: The columns to exclude from the input
+        :keyword lookup_exclude: The columns to exclude from the input
+        :keyword lookup_prefix: The prefix to append to lookup columns
+        :keyword reject: Reject unmatched input records (False by default)
+        :keyword merge: Merge schemas (True by default)
+        :keyword overwrite: Overwrite input values with lookup values if they have the same name
+        :keyword lookup_type: The type of lookup to use
+        :keyword record_unmatched: Provide an output for unmatched records
+
+        :return: A lookup transform
+        """
+        input_map = kwargs.pop('input_map', None)
+        input_include = kwargs.pop('input_include', None)
+        input_exclude = kwargs.pop('input_exclude', None)
+        lookup_map = kwargs.pop('lookup_map', None)
+        lookup_include = kwargs.pop('lookup_include', None)
+        lookup_exclude = kwargs.pop('lookup_exclude', None)
+        lookup_prefix =  kwargs.pop('lookup_prefix', None)
+        if kwargs.get('merge', True):
+            (input_map, input_schema) = cls._build_map(input.schema, input_map, input_include, input_exclude, None)
+            (lookup_map, lookup_schema) = cls._build_map(lookup.schema, lookup_map, lookup_include, lookup_exclude, lookup_prefix)
+            output = Port.merged(input_schema, lookup_schema)
+        else:
+            (input_map, input_schema) = cls._build_map(input.schema, input_map, input_include, input_exclude, None)
+            lookup_map = None
+            output = Port.port(input_schema)
+        unmatched = kwargs.pop('record_unmatched', False)
+        unmatched = Port.port(input_schema) if unmatched else None
+        input_keys = Keys.make_keys(input.schema, input_keys)
+        lookup_keys = Keys.make_keys(lookup.schema, lookup_keys)
+        identifier_keys = Keys.make_keys(input.schema, identifier_keys)
+        parent_keys = Keys.make_keys(input.schema, parent_keys)
+        return ParentLookupTransform(id, input, lookup, output, unmatched, input_keys, lookup_keys, input_map, lookup_map, identifier_keys, parent_keys, **kwargs)
+
+    def execute(self, context: ProcessingContext):
+        data = context.acquire(self.input)
+        table = context.acquire(self.lookup)
+        index = Index.create(table, self.lookup_keys, self.lookup_type)
+        parent_index = Index.create(data, self.identifier_keys)
+        result = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        missing = Dataset.for_port(self.unmatched) if self.unmatched is not None else None
+        additional = self.build_additional(context)
+        for row in data.rows:
+            try:
+                actual = row
+                link = None
+                while actual is not None and link is None:
+                    link = index.find(actual, self.input_keys)
+                    if link is None:
+                        actual = parent_index.find(actual, self.parent_keys)
+                        self.count(self.PARENT_COUNT, row, context)
+                if link is None:
+                    self.count(self.UNMATCHED_COUNT, row, context)
+                    if missing is not None:
+                        missing.add(row)
+                if link is not None or not self.reject:
+                    composed = self.compose(row, link, context, additional)
+                    if composed is not None:
+                        result.add(composed)
+                        self.count(self.ACCEPTED_COUNT, composed, context)
+            except Exception as err:
+                if self.fail_on_exception:
+                    self.logger.error("Exception raised in " + self.id + " for " + str(err))
+                    raise err
+                errors.add(Record.error(row, err))
+                self.count(self.ERROR_COUNT, row, context)
+            self.count(self.PROCESSED_COUNT, row, context)
+        context.save(self.output, result)
+        context.save(self.error, errors)
+        if missing is not None:
+            context.save(self.unmatched, missing)

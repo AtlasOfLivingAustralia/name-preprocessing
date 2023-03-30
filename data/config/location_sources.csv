@@ -1,0 +1,2 @@
+id,job,dir,inputDir,configDir,datasetID,centreLatitude,centreLongitude,bbox,currency
+tgn,tgn,Location,,,dr19606,-25.27,133.78,"-46,110,-10,157|-48,165,-33,179|-55,66,-48,77|-89,82,-50,179","Current,Both"
