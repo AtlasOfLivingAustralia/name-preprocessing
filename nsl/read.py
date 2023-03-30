@@ -105,7 +105,7 @@ def reader() -> Orchestrator:
     location_schema = LocationSchema()
     vernacular_status_schema = VernacularStatusSchema()
 
-    taxon_source = CsvSource.create("taxon_source", taxon_file, "excel", taxon_schema, no_errors=False)
+    taxon_source = CsvSource.create("taxon_source", taxon_file, "excel", taxon_schema, no_errors=False, fail_on_exception=True)
     scientific_taxon = FilterTransform.create("scientific_taxon", taxon_source.output, is_scientific_taxon)
     rank_source = CsvSource.create("rank_source", rank_map_file, "ala", rank_map_schema)
     taxon_rank_lookup = LookupTransform.create("taxon_rank_lookup", scientific_taxon.output, rank_source.output, 'taxonRank', 'term', reject=True, record_unmatched=True, lookup_map={'taxonRank': 'mappedTaxonRank', 'taxonRankLevel': 'taxonRankLevel' })
