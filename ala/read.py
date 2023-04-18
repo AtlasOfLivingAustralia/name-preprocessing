@@ -78,7 +78,8 @@ def vernacular_reader() -> Orchestrator:
     name_transform = MapTransform.create("name_transform", name_source.output, VernacularNameSchema(), {
        'vernacularName': MapTransform.capwords('vernacularName'),
        'datasetID': MapTransform.orDefault(MapTransform.choose('datasetID'), 'datasetID'),
-       'status': MapTransform.orDefault(MapTransform.choose('status'), 'defaultVernacularStatus')
+       'status': MapTransform.orDefault(MapTransform.choose('status'), 'defaultVernacularStatus'),
+       'language': MapTransform.orDefault(MapTransform.choose('language'), 'language')
     }, auto=True)
     name_output = CsvSink.create("name_output", name_transform.output, "vernacularName.csv", "excel", reduce=True)
     dwc_meta = MetaFile.create("dwc_meta", name_output)
@@ -95,6 +96,7 @@ def vernacular_reader() -> Orchestrator:
                                 ])
     return orchestrator
 
+
 def vernacular_list_reader() -> Orchestrator:
     with Orchestrator("ala_vernacular_list") as orchestrator:
 
@@ -108,7 +110,8 @@ def vernacular_list_reader() -> Orchestrator:
         name_transform = MapTransform.create("name_transform", vernacular_list.output, VernacularNameSchema(), {
            'vernacularName': MapTransform.capwords('vernacularName'),
            'datasetID': MapTransform.orDefault(MapTransform.choose('datasetID'), 'datasetID'),
-           'status': MapTransform.orDefault(MapTransform.choose('status'), 'defaultVernacularStatus')
+           'status': MapTransform.orDefault(MapTransform.choose('status'), 'defaultVernacularStatus'),
+           'language': MapTransform.orDefault(MapTransform.choose('language'), 'language')
         }, auto=True)
         names_unique = DeduplicateTransform.create('names_unique', name_transform.output, ('scientificName', 'vernacularName', 'language'))
         name_output = CsvSink.create("name_output", names_unique.output, "vernacularName.csv", "excel", reduce=True)
