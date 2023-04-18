@@ -96,32 +96,24 @@ def vernacular_reader() -> Orchestrator:
     return orchestrator
 
 def vernacular_list_reader() -> Orchestrator:
-    vernacular_list = VernacularListSource.create('vernacular_list', aliases={
-        'vernacular name': 'vernacularName',
-        'Notes': 'taxonRemarks'
-    })
-    species_metadata = CollectorySource.create('collectory_source')
-    name_transform = MapTransform.create("name_transform", vernacular_list.output, VernacularNameSchema(), {
-       'vernacularName': MapTransform.capwords('vernacularName'),
-       'datasetID': MapTransform.orDefault(MapTransform.choose('datasetID'), 'datasetID'),
-       'status': MapTransform.orDefault(MapTransform.choose('status'), 'defaultVernacularStatus')
-    }, auto=True)
-    names_unique = DeduplicateTransform.create('names_unique', name_transform.output, ('scientificName', 'vernacularName', 'language'))
-    name_output = CsvSink.create("name_output", names_unique.output, "vernacularName.csv", "excel", reduce=True)
-    dwc_meta = MetaFile.create("dwc_meta", name_output)
-    publisher = PublisherSource.create("publisher")
-    dwc_eml = EmlFile.create('dwc_eml', species_metadata.output, publisher.output)
+    with Orchestrator("ala_vernacular_list") as orchestrator:
 
-    orchestrator = Orchestrator("ala_vernacular_list",
-                                [
-                                    vernacular_list,
-                                    species_metadata,
-                                    name_transform,
-                                    names_unique,
-                                    name_output,
-                                    dwc_meta,
-                                    publisher,
-                                    dwc_eml
-                                ])
+        vernacular_list = VernacularListSource.create('vernacular_list', aliases={
+            'vernacular name': 'vernacularName',
+            'Birdlife Common Name': 'vernacularName',
+            'Population': 'establishmentMeans',
+            'Notes': 'taxonRemarks'
+        })
+        species_metadata = CollectorySource.create('collectory_source')
+        name_transform = MapTransform.create("name_transform", vernacular_list.output, VernacularNameSchema(), {
+           'vernacularName': MapTransform.capwords('vernacularName'),
+           'datasetID': MapTransform.orDefault(MapTransform.choose('datasetID'), 'datasetID'),
+           'status': MapTransform.orDefault(MapTransform.choose('status'), 'defaultVernacularStatus')
+        }, auto=True)
+        names_unique = DeduplicateTransform.create('names_unique', name_transform.output, ('scientificName', 'vernacularName', 'language'))
+        name_output = CsvSink.create("name_output", names_unique.output, "vernacularName.csv", "excel", reduce=True)
+        MetaFile.create("dwc_meta", name_output)
+        publisher = PublisherSource.create("publisher")
+        EmlFile.create('dwc_eml', species_metadata.output, publisher.output)
     return orchestrator
 
