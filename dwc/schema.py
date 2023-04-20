@@ -92,19 +92,21 @@ class VernacularSchema(Schema):
         uri = 'http://rs.gbif.org/terms/1.0/VernacularName'
         namespace = 'http://rs.tdwg.org/dwc/terms/'
 
+
 class VernacularNameSchema(Schema):
     """
     Schema for vernacular names with only a scientific name to match, rather than a taxonId
     """
-    scientificName = fields.String(metadata={ 'export': True })
+    scientificName = fields.String(metadata={'export': True})
+    scientificNameAuthorship = fields.String()
     kingdom = fields.String(missing=None)
     phylum = fields.String(missing=None)
     class_ = fields.String(missing=None, data_key='class', uri='http://rs.tdwg.org/dwc/terms/class')
     order = fields.String(missing=None)
     family = fields.String(missing=None)
-    vernacularName = fields.String(metadata={ 'export': True })
+    vernacularName = fields.String(metadata={'export': True})
     nameID = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/nameID')
-    datasetID = fields.String(missing=None, metadata={ 'export': True })
+    datasetID = fields.String(missing=None, metadata={'export': True})
     status = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/status')
     language = fields.String(missing=None, uri='http://purl.org/dc/terms/language')
     temporal = fields.String(missing=None, uri='http://purl.org/dc/terms/temporal')
@@ -129,6 +131,7 @@ class VernacularNameSchema(Schema):
         uri = 'http://rs.gbif.org/terms/1.0/VernacularName'
         namespace = 'http://rs.tdwg.org/dwc/terms/'
 
+
 class IdentifierSchema(Schema):
     """
     Schema for additional identifiers
@@ -147,6 +150,33 @@ class IdentifierSchema(Schema):
         ordered = True
         uri = 'http://rs.gbif.org/terms/1.0/Identifier'
         namespace = 'http://rs.tdwg.org/dwc/terms/'
+
+
+class IdentifierNameSchema(Schema):
+    """
+    Schema for additional identifiers matched by scientific name
+    """
+    scientificName = fields.String(metadata={'export': True})
+    scientificNameAuthorship = fields.String()
+    kingdom = fields.String(missing=None)
+    phylum = fields.String(missing=None)
+    class_ = fields.String(missing=None, data_key='class', uri='http://rs.tdwg.org/dwc/terms/class')
+    order = fields.String(missing=None)
+    family = fields.String(missing=None)
+    identifier = fields.String(required=True, uri="http://purl.org/dc/terms/identifier")
+    datasetID = fields.String(missing=None)
+    title = fields.String(missing=None, uri='http://purl.org/dc/terms/title')
+    status = fields.String(missing=None, uri='http://ala.org.au/terms/1.0/status')
+    format = fields.String(missing=None, uri='http://purl.org/dc/terms/format')
+    source = fields.String(missing=None, uri='http://purl.org/dc/terms/source')
+    taxonRemarks = fields.String(missing=None)
+    provenance = fields.String(missing=None, uri='http://purl.org/dc/terms/provenance')
+
+    class Meta:
+        ordered = True
+        uri = 'http://rs.gbif.org/terms/1.0/Identifier'
+        namespace = 'http://rs.tdwg.org/dwc/terms/'
+
 
 class DistributionSchema(Schema):
     """

@@ -112,6 +112,8 @@ selector = Selector.create(
     ala.read.vernacular_list_reader(),
     ausfungi.read.reader(),
     caab.read.reader(),
+    caab.read.reader_standard(),
+    caab.read.reader_code(),
     col.read.reader(args.col_reference, args.col_genus),
     nsl.read.reader(),
     nsl.read.additional_reader(),

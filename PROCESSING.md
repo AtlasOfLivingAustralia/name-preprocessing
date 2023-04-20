@@ -411,7 +411,7 @@ The rules can either be:
 
 * A function that takes a Record as an argument and returns an appropriate
   mapping. For example `lambda r: r.datasetID` or the named `mapDatasetID`.
-  Functions can have zero (constant), one (record), two (record and contaxt)
+  Functions can have zero (constant), one (record), two (record and context)
   or three (record, context and additional data)
 * A string containing a field name. The contents of the field is copied
   onto the corresponding output field.
