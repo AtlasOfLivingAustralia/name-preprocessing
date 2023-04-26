@@ -56,3 +56,17 @@ class CaabSchema(Schema):
 
     class Meta:
         ordered = True
+
+
+class CaabVernacularSchema(Schema):
+    vernacularName = fields.String(data_key="Standard Name", missing=None)
+    scientificName = fields.String(data_key="Scientific Name")
+    scientificNameAuthorship = fields.String(data_key="Authority", missing=None)
+    caabCode = fields.String(data_key="CAAB Code", missing=None)
+    family = fields.String(data_key="Family or Group", missing=None)
+    standard = fields.String(data_key="Standard", missing=None)
+    dateAdded = fields.String(data_key="Date Added", missing=None)
+    introduced = fields.String(data_key="Introduced", missing=None)
+
+    class Meta:
+        ordered = True
