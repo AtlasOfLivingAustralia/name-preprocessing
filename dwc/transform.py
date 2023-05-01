@@ -699,42 +699,39 @@ class DwcSyntheticNames(ThroughTransform):
                 subid = 0
                 modified = Record.copy(record)
                 for (name, rank, genus, subgenus, specificEpithet, infraspecificEpithet) in parents:
-                    if name in names:
-                        continue
-                    if rank not in self.ranks:
-                        continue
-                    names.add(name)
-                    synthetic = Record.copy(record)
-                    ntid = taxon_id + '_' + str(subid)
-                    subid += 1
-                    self.taxon_keys.set(synthetic, ntid)
-                    self.name_keys.set(synthetic, name)
-                    self.rank_keys.set(synthetic, rank)
-                    synthetic.data['genus'] = genus
+                    if name not in names and rank in self.ranks:
+                        names.add(name)
+                        synthetic = Record.copy(record)
+                        ntid = taxon_id + '_' + str(subid)
+                        subid += 1
+                        self.taxon_keys.set(synthetic, ntid)
+                        self.name_keys.set(synthetic, name)
+                        self.rank_keys.set(synthetic, rank)
+                        synthetic.data['genus'] = genus
+                        if 'subgenus' in synthetic.data or subgenus is not None:
+                            synthetic.data['subgenus'] = subgenus
+                        if 'specificEpithet' in synthetic.data or specificEpithet is not None:
+                            synthetic.data['specificEpithet'] = specificEpithet
+                        if 'infraspecificEpithet' in synthetic.data or infraspecificEpithet is not None:
+                            synthetic.data['infraspecificEpithet'] = infraspecificEpithet
+                        synthetic.data['taxonomicStatus'] = context.get_default('defaultTaxonomicStatus', 'inferredAccepted')
+                        for field in self.CLEAR_ALL:
+                            if field in synthetic.data:
+                                synthetic.data[field] = None
+                        clear = self.CLEAR_RANK.get(rank)
+                        if clear is not None:
+                            for level in clear:
+                                if level in synthetic.data:
+                                    synthetic.data[level] = None
+                        synthetic.data['provenance'] = "Created from " + base_name + " " + taxon_id + " for inferred placement"
+                        synthetic.data['taxonomicFlags'] = 'synthetic'
+                        result.add(synthetic)
                     if modified.genus is None and genus is not None:
                         modified.data['genus'] = genus
-                    if 'subgenus' in synthetic.data or subgenus is not None:
-                        synthetic.data['subgenus'] = subgenus
                     if modified.subgenus is None and subgenus is not None:
                         modified.data['subgenus'] = subgenus
-                    if 'specificEpithet' in synthetic.data or specificEpithet is not None:
-                        synthetic.data['specificEpithet'] = specificEpithet
                     if modified.specificEpithet is None and specificEpithet is not None:
                         modified.data['specificEpithet'] = specificEpithet
-                    if 'infraspecificEpithet' in synthetic.data or infraspecificEpithet is not None:
-                        synthetic.data['infraspecificEpithet'] = infraspecificEpithet
-                    synthetic.data['taxonomicStatus'] = context.get_default('defaultTaxonomicStatus', 'inferredAccepted')
-                    for field in self.CLEAR_ALL:
-                        if field in synthetic.data:
-                            synthetic.data[field] = None
-                    clear = self.CLEAR_RANK.get(rank)
-                    if clear is not None:
-                        for level in clear:
-                            if level in synthetic.data:
-                                synthetic.data[level] = None
-                    synthetic.data['provenance'] = "Created from " + base_name + " " + taxon_id + " for inferred placement"
-                    synthetic.data['taxonomicFlags'] = 'synthetic'
-                    result.add(synthetic)
                     self.count(self.ACCEPTED_COUNT, record, context)
                 result.add(modified)
             except Exception as err:
