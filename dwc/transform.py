@@ -24,6 +24,7 @@ from processing.transform import ThroughTransform, Transform
 UNINOMIAL = re.compile(r"^[A-Z][a-zü]|[A-Z][A-Z]")
 SCIENTIFIC_START = re.compile(r"^(?:\"\s*)?(?:[Xx]\s+)?[A-Z][a-zü]")
 
+
 @attr.s
 class DwcTaxonValidate(ThroughTransform):
     """Test for structurally valid taxon entries"""
@@ -43,24 +44,28 @@ class DwcTaxonValidate(ThroughTransform):
     subgenus_keys: Keys = attr.ib()
 
     @classmethod
-    def create(cls, id: str,  input: Port, **kwargs):
+    def create(cls, id: str, input: Port, **kwargs):
         check_names = kwargs.pop('check_names', True)
         output = Port.port(input.schema)
         taxon_keys = Keys.make_keys(input.schema, 'taxonID')
         parent_keys = Keys.make_keys(input.schema, 'parentNameUsageID')
         accepted_keys = Keys.make_keys(input.schema, 'acceptedNameUsageID')
-        scientific_name_keys = Keys.make_keys(input.schema, kwargs.pop('scientific_name_keys', 'scientificName')) if check_names else None
+        scientific_name_keys = Keys.make_keys(input.schema, kwargs.pop('scientific_name_keys',
+                                                                       'scientificName')) if check_names else None
         kingdom_keys = Keys.make_keys(input.schema, kwargs.pop('kingdom_keys', 'kingdom')) if check_names else None
         phylum_keys = Keys.make_keys(input.schema, kwargs.pop('phylum_keys', 'phylum')) if check_names else None
         class_keys = Keys.make_keys(input.schema, kwargs.pop('class_keys', 'class_')) if check_names else None
         subclass_keys = Keys.make_keys(input.schema, kwargs.pop('subclass_keys', 'subclass')) if check_names else None
         order_keys = Keys.make_keys(input.schema, kwargs.pop('order_keys', 'order')) if check_names else None
         suborder_keys = Keys.make_keys(input.schema, kwargs.pop('suborder_keys', 'suborder')) if check_names else None
-        infraorder_keys = Keys.make_keys(input.schema, kwargs.pop('infraorder_keys', 'infraorder')) if check_names else None
+        infraorder_keys = Keys.make_keys(input.schema,
+                                         kwargs.pop('infraorder_keys', 'infraorder')) if check_names else None
         family_keys = Keys.make_keys(input.schema, kwargs.pop('family_keys', 'family')) if check_names else None
         genus_keys = Keys.make_keys(input.schema, kwargs.pop('genus_keys', 'genus')) if check_names else None
         subgenus_keys = Keys.make_keys(input.schema, kwargs.pop('subgenus_keys', 'subgenus')) if check_names else None
-        return DwcTaxonValidate(id, input, output, None, taxon_keys, parent_keys, accepted_keys, scientific_name_keys, kingdom_keys, phylum_keys, class_keys, subclass_keys, order_keys, suborder_keys, infraorder_keys, family_keys, genus_keys, subgenus_keys, **kwargs)
+        return DwcTaxonValidate(id, input, output, None, taxon_keys, parent_keys, accepted_keys, scientific_name_keys,
+                                kingdom_keys, phylum_keys, class_keys, subclass_keys, order_keys, suborder_keys,
+                                infraorder_keys, family_keys, genus_keys, subgenus_keys, **kwargs)
 
     def check_scientific_name(self, record: Record, keys: Keys, uninomial: bool, errors: List[str]):
         if not keys:
@@ -128,6 +133,7 @@ class DwcTaxonValidate(ThroughTransform):
         context.save(self.output, result)
         context.save(self.error, errors)
 
+
 @attr.s
 class DwcTaxonClean(ThroughTransform):
     """Remove any invalid links. Used for cases where there is a filter of accepted records"""
@@ -179,6 +185,7 @@ class DwcTaxonClean(ThroughTransform):
         context.save(self.output, result)
         context.save(self.error, errors)
 
+
 @attr.s
 class DwcTaxonReidentify(ThroughTransform):
     """
@@ -193,13 +200,14 @@ class DwcTaxonReidentify(ThroughTransform):
     identifier: Callable = attr.ib()
 
     @classmethod
-    def create(cls, id: str,  input: Port, identifier_keys, parent_keys, accepted_keys, identifier: Callable, **kwargs):
+    def create(cls, id: str, input: Port, identifier_keys, parent_keys, accepted_keys, identifier: Callable, **kwargs):
         output = Port.port(input.schema)
         mapping = Port.port(MappingSchema())
         identifier_keys = Keys.make_keys(input.schema, identifier_keys)
         parent_keys = Keys.make_keys(input.schema, parent_keys)
         accepted_keys = Keys.make_keys(input.schema, accepted_keys)
-        return DwcTaxonReidentify(id, input, output, None, mapping, identifier_keys, parent_keys, accepted_keys, identifier, **kwargs)
+        return DwcTaxonReidentify(id, input, output, None, mapping, identifier_keys, parent_keys, accepted_keys,
+                                  identifier, **kwargs)
 
     def outputs(self) -> Dict[str, Port]:
         outputs = super().outputs()
@@ -212,7 +220,7 @@ class DwcTaxonReidentify(ThroughTransform):
         result = Dataset.for_port(self.output)
         mapping = Dataset.for_port(self.mapping)
         errors = Dataset.for_port(self.error)
-        map_lookup = dict() # Use a lookup table because the identifier function may be stateful
+        map_lookup = dict()  # Use a lookup table because the identifier function may be stateful
         map_replace = dict()
         line = 0
         for record in data.rows:
@@ -275,7 +283,8 @@ class DwcTaxonParent(ThroughTransform):
     kingdom_keys: Keys = attr.ib()
 
     @classmethod
-    def create(cls, id: str,  input: Port, identifier_keys, parent_keys, accepted_keys, name_keys, author_keys, rank_keys, **kwargs):
+    def create(cls, id: str, input: Port, identifier_keys, parent_keys, accepted_keys, name_keys, author_keys,
+               rank_keys, **kwargs):
         output = Port.merged(input.schema, ClassificationSchema())
         identifier_keys = Keys.make_keys(input.schema, identifier_keys)
         parent_keys = Keys.make_keys(input.schema, parent_keys)
@@ -294,10 +303,11 @@ class DwcTaxonParent(ThroughTransform):
     def execute(self, context: ProcessingContext):
         data = context.acquire(self.input)
         index = Index.create(data, self.identifier_keys, IndexType.FIRST)
-        kingdom_index = Index.create(context.acquire(self.kingdoms), self.kingdom_keys, IndexType.FIRST) if self.kingdoms else None
+        kingdom_index = Index.create(context.acquire(self.kingdoms), self.kingdom_keys,
+                                     IndexType.FIRST) if self.kingdoms else None
         result = Dataset.for_port(self.output)
         errors = Dataset.for_port(self.error)
-        map_lookup = dict() # Use a lookup table because the identifier function may be stateful
+        map_lookup = dict()  # Use a lookup table because the identifier function may be stateful
         map_replace = dict()
         line = 0
         for record in data.rows:
@@ -312,7 +322,8 @@ class DwcTaxonParent(ThroughTransform):
                     author = self.author_keys.get(record) if self.author_keys is not None else None
                     if author and name.endswith(author):
                         name = name[0:-len(author)].strip()
-                    if composed.kingdom is None and ((kingdom_index is None and rank == 'kingdom') or (kingdom_index is not None and kingdom_index.findByKey(name) is not None)):
+                    if composed.kingdom is None and ((kingdom_index is None and rank == 'kingdom') or (
+                            kingdom_index is not None and kingdom_index.findByKey(name) is not None)):
                         composed.data['kingdom'] = name
                     elif rank == 'phylum' and composed.phylum is None:
                         composed.data['phylum'] = name
@@ -346,8 +357,10 @@ class DwcTaxonParent(ThroughTransform):
         context.save(self.output, result)
         context.save(self.error, errors)
 
+
 def _default_dataset_id():
-    return lambda context, record, identifier:  context.get_default('datasetID')
+    return lambda context, record, identifier: context.get_default('datasetID')
+
 
 @attr.s
 class DwcIdentifierTranslator:
@@ -371,7 +384,8 @@ class DwcIdentifierTranslator:
         raise ValueError("Unable to build callable for " + accessor)
 
     @classmethod
-    def create(cls, identifier, status = 'variant', datasetID = _default_dataset_id(), title = None, subject = None, format = None, source = None, provenance = None):
+    def create(cls, identifier, status='variant', datasetID=_default_dataset_id(), title=None, subject=None,
+               format=None, source=None, provenance=None):
         """
         Create a translator based on regular expressions.
         Translation of other features depend on a generator
@@ -397,7 +411,8 @@ class DwcIdentifierTranslator:
         return DwcIdentifierTranslator(identifier, status, datasetID, title, subject, format, source, provenance)
 
     @classmethod
-    def regex(cls, pattern: str, replace: str, status = 'alternative', datasetID = _default_dataset_id(), title = None, subject = None, format = None, source = None, provenance = None):
+    def regex(cls, pattern: str, replace: str, status='alternative', datasetID=_default_dataset_id(), title=None,
+              subject=None, format=None, source=None, provenance=None):
         """
         Create a translator based on regular expressions.
         Translation of other features depend on a generator
@@ -433,6 +448,7 @@ class DwcIdentifierTranslator:
         data['provenance'] = self.provenance(context, record, id)
         return (Record(record.line, data, record.issues), id)
 
+
 @attr.s
 class DwcIdentifierGenerator(Transform):
     CREATED = "created"
@@ -445,7 +461,7 @@ class DwcIdentifierGenerator(Transform):
     keep_all: bool = attr.ib(kw_only=True, default=False)
 
     @classmethod
-    def create(cls, id: str,  input: Port, taxon_keys, identifier_keys, *args, **kwargs):
+    def create(cls, id: str, input: Port, taxon_keys, identifier_keys, *args, **kwargs):
         output = Port.port(IdentifierSchema())
         taxon_keys = Keys.make_keys(input.schema, taxon_keys)
         identifier_keys = Keys.make_keys(input.schema, identifier_keys)
@@ -478,7 +494,8 @@ class DwcIdentifierGenerator(Transform):
                     for id in working:
                         for translator in self.translators:
                             (additional, identifier) = translator.translate(context, row, key, id)
-                            if additional is not None and identifier not in seen and (self.keep_all or identifier != id):
+                            if additional is not None and identifier not in seen and (
+                                    self.keep_all or identifier != id):
                                 self.count(self.CREATED, additional, context)
                                 result.add(additional)
                                 seen.add(identifier)
@@ -492,6 +509,7 @@ class DwcIdentifierGenerator(Transform):
             self.count(self.PROCESSED_COUNT, row, context)
         context.save(self.output, result)
         context.save(self.error, errors)
+
 
 @attr.s
 class DwcAncestorIdentifierGenerator(Transform):
@@ -507,7 +525,8 @@ class DwcAncestorIdentifierGenerator(Transform):
     translator: DwcIdentifierTranslator = attr.ib()
 
     @classmethod
-    def create(cls, id: str, input: Port, full: Port, taxon_keys, ancestor_keys, translator: DwcIdentifierTranslator, **kwargs):
+    def create(cls, id: str, input: Port, full: Port, taxon_keys, ancestor_keys, translator: DwcIdentifierTranslator,
+               **kwargs):
         taxon_keys = Keys.make_keys(input.schema, taxon_keys)
         ancestor_keys = Keys.make_keys(full.schema, ancestor_keys)
         output = Port.port(IdentifierSchema())
@@ -548,7 +567,7 @@ class DwcAncestorIdentifierGenerator(Transform):
                     trail.add(kv)
                     ancestor = index.find(ancestor, self.ancestor_keys)
                     if ancestor is None:
-                         break
+                        break
                     composed = self.compose(record, ancestor, context, additional)
                     if composed is not None:
                         result.add(composed)
@@ -578,6 +597,7 @@ class DwcAncestorIdentifierGenerator(Transform):
         (composed, _id) = self.translator.translate(context, ancestor, parent_id, id)
         return composed
 
+
 @attr.s
 class DwcSyntheticNames(ThroughTransform):
     """Create genus/species names for dangling taxa in partial lists"""
@@ -588,8 +608,9 @@ class DwcSyntheticNames(ThroughTransform):
 
     RANK_MARKER = '\\s+(?:gen|sp|ssp|subsp|var|f|form)\\.?'
     PLACEHOLDER = re.compile('([A-Z][a-z]+)' + RANK_MARKER + '(?:\\s+.*|$)')
-    HYBRID = re.compile('([A-Z][a-z]+)(?:\\s+[a-z]+)?\\s+(?:x\\s+|\u00d7\\s+|\u00d7[a-z]).*')
-    NAME_PARTS = re.compile('([A-Z][a-z]*)(\\s+\\(([A-Z][a-z]*)\\))?(\\s+[a-z]+)(?:' + RANK_MARKER + ')?(\\s+[a-z]+)?.*')
+    HYBRID = re.compile('([A-Z][a-z]+)(?:\\s+[a-z]+)?\\s+(?:X\\s+|x\\s+|\u00d7\\s+|\u00d7[a-z]).*')
+    NAME_PARTS = re.compile(
+        '([A-Z][a-z]*)(\\s+\\(([A-Z][a-z]*)\\))?(\\s+[a-z]+)(?:' + RANK_MARKER + ')?(\\s+[a-z]+)?.*')
 
     CLEAR_ALL = [
         'scientificNameAuthorship',
@@ -611,12 +632,16 @@ class DwcSyntheticNames(ThroughTransform):
         'establishmentMeans'
     ]
     CLEAR_RANK = {
-        'kingdom': ['phylum', 'class_', 'subclass', 'order', 'suborder', 'infraorder', 'family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
-        'phylum': ['class_', 'subclass', 'order', 'suborder', 'infraorder', 'family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
-        'class': ['subclass', 'order', 'suborder', 'infraorder', 'family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
-        'subclass': ['order', 'suborder', 'infraorder', 'family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
+        'kingdom': ['phylum', 'class_', 'subclass', 'order', 'suborder', 'infraorder', 'family', 'genus', 'subgenus',
+                    'specificEpithet', 'infraspecificEpithet'],
+        'phylum': ['class_', 'subclass', 'order', 'suborder', 'infraorder', 'family', 'genus', 'subgenus',
+                   'specificEpithet', 'infraspecificEpithet'],
+        'class': ['subclass', 'order', 'suborder', 'infraorder', 'family', 'genus', 'subgenus', 'specificEpithet',
+                  'infraspecificEpithet'],
+        'subclass': ['order', 'suborder', 'infraorder', 'family', 'genus', 'subgenus', 'specificEpithet',
+                     'infraspecificEpithet'],
         'order': ['suborder', 'infraorder', 'family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
-        'suborder': ['infraorder', 'family', 'genus', 'subgenus','specificEpithet', 'infraspecificEpithet'],
+        'suborder': ['infraorder', 'family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
         'infraorder': ['family', 'genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
         'family': ['genus', 'subgenus', 'specificEpithet', 'infraspecificEpithet'],
         'genus': ['subgenus', 'specificEpithet', 'infraspecificEpithet'],
@@ -660,7 +685,6 @@ class DwcSyntheticNames(ThroughTransform):
             fragments.append((value, 'species', genus, subgenus, match.group(4).strip(), None))
         return fragments
 
-
     def execute(self, context: ProcessingContext):
         data = context.acquire(self.input)
         result = Dataset.for_port(self.output)
@@ -694,6 +718,7 @@ class DwcSyntheticNames(ThroughTransform):
                 if record.kingdom is not None:
                     parents.append((record.kingdom, 'kingdom', None, None, None, None))
                 if len(parents) == 0:
+                    result.add(record)
                     continue
                 taxon_id = self.taxon_keys.get(record)
                 subid = 0
@@ -714,7 +739,8 @@ class DwcSyntheticNames(ThroughTransform):
                             synthetic.data['specificEpithet'] = specificEpithet
                         if 'infraspecificEpithet' in synthetic.data or infraspecificEpithet is not None:
                             synthetic.data['infraspecificEpithet'] = infraspecificEpithet
-                        synthetic.data['taxonomicStatus'] = context.get_default('defaultTaxonomicStatus', 'inferredAccepted')
+                        synthetic.data['taxonomicStatus'] = context.get_default('defaultTaxonomicStatus',
+                                                                                'inferredAccepted')
                         for field in self.CLEAR_ALL:
                             if field in synthetic.data:
                                 synthetic.data[field] = None
@@ -723,7 +749,8 @@ class DwcSyntheticNames(ThroughTransform):
                             for level in clear:
                                 if level in synthetic.data:
                                     synthetic.data[level] = None
-                        synthetic.data['provenance'] = "Created from " + base_name + " " + taxon_id + " for inferred placement"
+                        synthetic.data[
+                            'provenance'] = "Created from " + base_name + " " + taxon_id + " for inferred placement"
                         synthetic.data['taxonomicFlags'] = 'synthetic'
                         result.add(synthetic)
                     if modified.genus is None and genus is not None:
@@ -741,6 +768,7 @@ class DwcSyntheticNames(ThroughTransform):
                 errors.add(Record.error(record, err))
         context.save(self.output, result)
         context.save(self.error, errors)
+
 
 @attr.s
 class DwcRename(ThroughTransform):
@@ -764,7 +792,7 @@ class DwcRename(ThroughTransform):
     subgenus_keys: Keys = attr.ib()
 
     @classmethod
-    def create(cls, id: str,  input: Port, mapping: Port, **kwargs):
+    def create(cls, id: str, input: Port, mapping: Port, **kwargs):
         output = Port.port(input.schema)
         rank_keys = Keys.make_keys(input.schema, kwargs.pop('rank_keys', 'taxonRank'))
         scientific_name_keys = Keys.make_keys(input.schema, kwargs.pop('scientific_name_keys', 'scientificName'))
@@ -778,14 +806,17 @@ class DwcRename(ThroughTransform):
         family_keys = Keys.make_keys(input.schema, kwargs.pop('family_keys', 'family'))
         genus_keys = Keys.make_keys(input.schema, kwargs.pop('genus_keys', 'genus'))
         subgenus_keys = Keys.make_keys(input.schema, kwargs.pop('subgenus_keys', 'subgenus'))
-        return DwcRename(id, input, output, None, mapping, rank_keys, scientific_name_keys, kingdom_keys, phylum_keys, class_keys, subclass_keys, order_keys, suborder_keys, infraorder_keys, family_keys, genus_keys, subgenus_keys, **kwargs)
+        return DwcRename(id, input, output, None, mapping, rank_keys, scientific_name_keys, kingdom_keys, phylum_keys,
+                         class_keys, subclass_keys, order_keys, suborder_keys, infraorder_keys, family_keys, genus_keys,
+                         subgenus_keys, **kwargs)
 
     def inputs(self) -> Dict[str, Port]:
         inputs = super().inputs()
         inputs['mapping'] = self.mapping
         return inputs
 
-    def rename(self, record: Record, map: Dict[str, List[Record]], keys: Keys, rank: str, context: ProcessingContext) -> Record:
+    def rename(self, record: Record, map: Dict[str, List[Record]], keys: Keys, rank: str,
+               context: ProcessingContext) -> Record:
         rank = rank.lower() if rank else None
         name = keys.get(record)
         if not name:
@@ -821,7 +852,7 @@ class DwcRename(ThroughTransform):
         map = dict()
         for record in mapping.rows:
             original = record.original
-            replacements = map.get(  original)
+            replacements = map.get(original)
             if replacements is None:
                 replacements = list()
                 map[original] = replacements
@@ -850,6 +881,7 @@ class DwcRename(ThroughTransform):
         context.save(self.output, result)
         context.save(self.error, errors)
 
+
 @attr.s
 class DwcVernacularStatus(ThroughTransform):
     """
@@ -861,13 +893,14 @@ class DwcVernacularStatus(ThroughTransform):
     taxon_remarks_keys: Keys = attr.ib()
 
     @classmethod
-    def create(cls, id: str,  input: Port, status: Port, **kwargs):
+    def create(cls, id: str, input: Port, status: Port, **kwargs):
         output = Port.port(input.schema)
         reject = Port.port(input.schema)
         vernacular_name_keys = Keys.make_keys(input.schema, kwargs.pop('vernacular_name_keys', 'vernacularName'))
         status_keys = Keys.make_keys(input.schema, kwargs.pop('status_keys', 'status'))
         taxon_remarks_keys = Keys.make_keys(input.schema, kwargs.pop('taxon_remarks', 'taxonRemarks'))
-        return DwcVernacularStatus(id, input, output, reject, status, vernacular_name_keys, status_keys, taxon_remarks_keys, **kwargs)
+        return DwcVernacularStatus(id, input, output, reject, status, vernacular_name_keys, status_keys,
+                                   taxon_remarks_keys, **kwargs)
 
     def inputs(self) -> Dict[str, Port]:
         inputs = super().inputs()
@@ -898,7 +931,8 @@ class DwcVernacularStatus(ThroughTransform):
                     match = True
                     include = include and pattern[1].include
                     status = pattern[1].status if pattern[1].status else status
-                    taxon_remarks = (taxon_remarks + " " if taxon_remarks else "") + pattern[1].taxonRemarks if pattern[1].taxonRemarks else taxon_remarks
+                    taxon_remarks = (taxon_remarks + " " if taxon_remarks else "") + pattern[1].taxonRemarks if pattern[
+                        1].taxonRemarks else taxon_remarks
                 if match:
                     record = Record.copy(record)
                     self.status_keys.set(record, status)
@@ -914,6 +948,7 @@ class DwcVernacularStatus(ThroughTransform):
         context.save(self.output, result)
         context.save(self.reject, rejects)
         context.save(self.error, errors)
+
 
 @attr.s
 class DwcDefaultDistribution(ThroughTransform):
@@ -939,9 +974,11 @@ class DwcDefaultDistribution(ThroughTransform):
         output = Port.port(DistributionSchema())
         taxon_keys = Keys.make_keys(input.schema, kwargs.pop('taxon_keys', 'taxonID'))
         taxonomic_status_keys = Keys.make_keys(input.schema, kwargs.pop('taxonomic_status_keys', 'taxonomicStatus'))
-        distribution_keys = Keys.make_keys(distribution.schema, kwargs.pop('distribution_keys', 'taxonID')) if distribution else None
+        distribution_keys = Keys.make_keys(distribution.schema,
+                                           kwargs.pop('distribution_keys', 'taxonID')) if distribution else None
         location_keys = Keys.make_keys(location.schema, kwargs.pop('location_keys', 'locationID'))
-        return DwcDefaultDistribution(id, input, output, None, distribution, location, taxon_keys, taxonomic_status_keys, distribution_keys, location_keys, **kwargs)
+        return DwcDefaultDistribution(id, input, output, None, distribution, location, taxon_keys,
+                                      taxonomic_status_keys, distribution_keys, location_keys, **kwargs)
 
     def execute(self, context: ProcessingContext):
         data = context.acquire(self.input)
@@ -993,6 +1030,7 @@ class DwcDefaultDistribution(ThroughTransform):
         context.save(self.output, result)
         context.save(self.error, errors)
 
+
 @attr.s
 class DwcScientificNameStatus(ThroughTransform):
     """
@@ -1005,14 +1043,16 @@ class DwcScientificNameStatus(ThroughTransform):
     taxon_remarks_keys: Keys = attr.ib()
 
     @classmethod
-    def create(cls, id: str,  input: Port, status: Port, **kwargs):
+    def create(cls, id: str, input: Port, status: Port, **kwargs):
         output = Port.port(input.schema)
         reject = Port.port(input.schema)
         scientific_name_keys = Keys.make_keys(input.schema, kwargs.pop('vernacular_name_keys', 'scientificName'))
         taxonomic_status_keys = Keys.make_keys(input.schema, kwargs.pop('taxonomic_status_keys', 'taxonomicStatus'))
-        nomenclatural_status_keys = Keys.make_keys(input.schema, kwargs.pop('nomenclatural_status_keys', 'nomenclaturalStatus'))
+        nomenclatural_status_keys = Keys.make_keys(input.schema,
+                                                   kwargs.pop('nomenclatural_status_keys', 'nomenclaturalStatus'))
         taxon_remarks_keys = Keys.make_keys(input.schema, kwargs.pop('taxon_remarks', 'taxonRemarks'))
-        return DwcScientificNameStatus(id, input, output, reject, status, scientific_name_keys, taxonomic_status_keys, nomenclatural_status_keys, taxon_remarks_keys, **kwargs)
+        return DwcScientificNameStatus(id, input, output, reject, status, scientific_name_keys, taxonomic_status_keys,
+                                       nomenclatural_status_keys, taxon_remarks_keys, **kwargs)
 
     def inputs(self) -> Dict[str, Port]:
         inputs = super().inputs()
@@ -1045,8 +1085,10 @@ class DwcScientificNameStatus(ThroughTransform):
                     match = True
                     include = include and pattern[1].include
                     taxonomic_status = pattern[1].taxonomicStatus if pattern[1].taxonomicStatus else taxonomic_status
-                    nomenclatural_status = pattern[1].nomenclaturalStatus if pattern[1].nomenclaturalStatus else nomenclatural_status
-                    taxon_remarks = (taxon_remarks + " " if taxon_remarks else "") + matcher.expand(pattern[1].taxonRemarks) if pattern[1].taxonRemarks else taxon_remarks
+                    nomenclatural_status = pattern[1].nomenclaturalStatus if pattern[
+                        1].nomenclaturalStatus else nomenclatural_status
+                    taxon_remarks = (taxon_remarks + " " if taxon_remarks else "") + matcher.expand(
+                        pattern[1].taxonRemarks) if pattern[1].taxonRemarks else taxon_remarks
                     if pattern[1].replace:
                         name = matcher.expand(pattern[1].replace)
                 if match:
