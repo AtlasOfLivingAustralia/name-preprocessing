@@ -24,6 +24,7 @@ from processing.node import ProcessingContext
 from processing.source import Source, CsvSource
 from processing.transform import extract_href
 
+
 @attr.s
 class SpeciesListSource(Source):
     """Read a species list from the ALA species list service"""
@@ -32,7 +33,7 @@ class SpeciesListSource(Source):
     batchsize: int = attr.ib()
 
     @classmethod
-    def create(cls, id:str, service="https://lists.ala.org.au/ws", link="https://lists.ala.org.au", batchsize=100):
+    def create(cls, id: str, service="https://lists.ala.org.au/ws", link="https://lists.ala.org.au", batchsize=100):
         schema = ExtendedTaxonSchema()
         output = Port.port(schema)
         error = Port.error_port(schema)
@@ -41,16 +42,23 @@ class SpeciesListSource(Source):
     def execute(self, context: ProcessingContext):
         output = Dataset.for_port(self.output)
         errors = Dataset.for_port(self.error)
-        fieldmap = { (field.data_key if field.data_key is not None else field.name).lower(): field.name for field in self.output.schema.fields.values()}
+        fieldmap = dict()
+        if 'vernacularName' in self.output.schema.fields:
+            fieldmap['commonname'] = 'vernacularName'
+            fieldmap['vernacular'] = 'vernacularName'
+            fieldmap['common'] = 'vernacularName'
+        fieldmap.update({(field.data_key if field.data_key is not None else field.name).lower(): field.name for field in
+                         self.output.schema.fields.values()})
         dr = context.get_default('datasetID')
         idstem = "ALA_" + dr.upper() + "_"
-        defaultSource = self.link + "/speciesListItem/list/" + dr
+        default_source = self.link + "/speciesListItem/list/" + dr
         # If we ever get batch size working
         cont = True
         line = 1
         offset = 0
         while cont:
-            request = requests.request('GET', self.service + "/speciesListItems/" + dr, params={'q': '', 'includeKVP': 'true', 'max': 1000000})
+            request = requests.request('GET', self.service + "/speciesListItems/" + dr,
+                                       params={'q': '', 'includeKVP': 'true', 'max': 1000000})
             list = request.json()
             for item in list:
                 data = dict()
@@ -67,7 +75,7 @@ class SpeciesListSource(Source):
                 if 'source' in data:
                     data['source'] = extract_href(data['source'])
                 else:
-                    data['source'] = defaultSource + "?q=" + urllib.parse.quote_plus(item['name'])
+                    data['source'] = default_source + "?q=" + urllib.parse.quote_plus(item['name'])
                 if 'taxonomicStatus' not in data:
                     status = 'inferredUnplaced'
                     if 'kingdom' in data or 'phylum' in data or 'class' in data or 'order' in data or 'family' in data:
@@ -90,6 +98,7 @@ class SpeciesListSource(Source):
         context.save(self.output, output)
         context.save(self.error, errors)
 
+
 @attr.s
 class VernacularListSource(Source):
     """Read a vernacular list from the ALA species list service"""
@@ -98,7 +107,7 @@ class VernacularListSource(Source):
     aliases: Dict[str, str] = attr.ib(factory=dict)
 
     @classmethod
-    def create(cls, id:str, aliases={}, service="https://lists.ala.org.au/ws", link="https://lists.ala.org.au"):
+    def create(cls, id: str, aliases={}, service="https://lists.ala.org.au/ws", link="https://lists.ala.org.au"):
         schema = VernacularNameSchema()
         output = Port.port(schema)
         error = Port.error_port(schema)
@@ -107,12 +116,13 @@ class VernacularListSource(Source):
     def execute(self, context: ProcessingContext):
         output = Dataset.for_port(self.output)
         errors = Dataset.for_port(self.error)
-        fieldmap = { (field.data_key if field.data_key is not None else field.name): field.name for field in self.output.schema.fields.values()}
+        fieldmap = {(field.data_key if field.data_key is not None else field.name): field.name for field in
+                    self.output.schema.fields.values()}
         vernacular = self.output.schema.fields.get('vernacularName')
         fieldmap['commonName'] = vernacular
         fieldmap['common name'] = vernacular
         fieldmap['vernacular name'] = vernacular
-        additional = { (alias, fieldmap.get(field)) for (alias, field)  in self.aliases.items() }
+        additional = {(alias, fieldmap.get(field)) for (alias, field) in self.aliases.items()}
         fieldmap.update(additional)
         dr = context.get_default('datasetID')
         idstem = "ALA_" + dr.upper() + "_V"
@@ -135,7 +145,8 @@ class VernacularListSource(Source):
                 data['source'] = defaultSource + "?q=" + urllib.parse.quote_plus(item['name'])
             record = Record(line, data, None)
             if data.get('vernacularName') is None:
-                errors.add(Record.error(record, None, "No vernacular name for " + dr + " " + str(line) + " " + item['name']))
+                errors.add(
+                    Record.error(record, None, "No vernacular name for " + dr + " " + str(line) + " " + item['name']))
                 self.count(self.ERROR_COUNT, record, context)
             else:
                 output.add(record)
@@ -145,13 +156,14 @@ class VernacularListSource(Source):
         context.save(self.output, output)
         context.save(self.error, errors)
 
+
 @attr.s
 class CollectorySource(Source):
     """Read a collectory metadata from the ALA collectory service"""
     service: str = attr.ib()
 
     @classmethod
-    def create(cls, id:str, service="https://collections.ala.org.au/ws"):
+    def create(cls, id: str, service="https://collections.ala.org.au/ws"):
         schema = CollectorySchema()
         output = Port.port(schema)
         error = Port.error_port(schema)
@@ -165,7 +177,7 @@ class CollectorySource(Source):
             dr = context.get_default('datasetID')
             url = self.service + "/dataResource/" + dr
             self.logger.info("Retrieving metadata from " + url)
-            collection = {'uid': dr }
+            collection = {'uid': dr}
             try:
                 collection = requests.get(url).json()
             except Exception as err:
@@ -215,6 +227,7 @@ class CollectorySource(Source):
         self.count(self.PROCESSED_COUNT, record, context)
         context.save(self.output, output)
         context.save(self.error, errors)
+
 
 class PublisherSource(CsvSource):
     """Default source for publisher metadata"""
