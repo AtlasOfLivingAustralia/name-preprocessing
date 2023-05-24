@@ -323,7 +323,11 @@ class DwcTaxonParent(ThroughTransform):
                     if author and name.endswith(author):
                         name = name[0:-len(author)].strip()
                     if composed.kingdom is None and ((kingdom_index is None and rank == 'kingdom') or (
-                            kingdom_index is not None and kingdom_index.findByKey(name) is not None)):
+                             kingdom_index is not None and kingdom_index.findByKey(name) is not None
+                             and (rank == 'kingdom' or rank == 'unranked'))):
+                        # kingdom rank is  the fix for Bacteria -
+                        # unranked is to overcome a problem that rank of kingdom creates with Viruses
+                        # fix for Issue #14 - https://github.com/AtlasOfLivingAustralia/name-preprocessing/issues/14
                         composed.data['kingdom'] = name
                     elif rank == 'phylum' and composed.phylum is None:
                         composed.data['phylum'] = name

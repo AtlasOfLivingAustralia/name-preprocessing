@@ -1,4 +1,4 @@
-id,job,dir,inputDir,configDir,datasetID,nomenclaturalCode,defaultOrganisation,geographicCoverage,taxonomicCoverage,sourceUrl,defaultVernacularStatus,defaultAcceptedStatus,defaultSynonymStatus,defaultLocationID,applyLocationToTaxonomicStatus,countryCode,language
+ id,job,dir,inputDir,configDir,datasetID,nomenclaturalCode,defaultOrganisation,geographicCoverage,taxonomicCoverage,sourceUrl,defaultVernacularStatus,defaultAcceptedStatus,defaultSynonymStatus,defaultLocationID,applyLocationToTaxonomicStatus,countryCode,language
 default,,,,,,,,,,,common,inferredAccepted,inferredSynonym,http://vocab.getty.edu/tgn/7000490,misapplied|excluded|inferredMisapplied|inferredExcluded|miscellaneousLiterature,AU,en
 afd,afd,AFD,,,dr2699,ICZN,Australian Biological Resources Study,,Animalia,,,,,,,,
 apni,additional_nsl,APNI,APC,"APNI,NSL",dr2700,ICN,Australian Biological Resources Study,,Plantae,,,,,,,,
@@ -9,7 +9,7 @@ lichens,nsl,Lichens,,"Lichens,NSL",dr17664,ICN,Australian Biological Resources S
 caab,caab_standard,CAAB,,,dr2704,,CSIRO,,,"https://www.marine.csiro.au/data/caab/taxon_report.cfm?caab_code=",,,,,,,
 caab_code,caab_code,CAABCode,CAAB,CAAB,dr2704,,CSIRO,,,"https://www.marine.csiro.au/data/caab/taxon_report.cfm?caab_code=",,,,,,,
 nzor,nzor,NZOR,,,dr2707,,Landcare Research,New Zealand,,,,,,http://vocab.getty.edu/tgn/1000226,,NZ,
-col,col,CoL,,,dr2705,,The Catalogue of Life,,"Archaea, Bacteria, Protozoa, Chromista, Virusesm Fungi",,,,,,,,
+col,col,CoL,,,dr2705,,The Catalogue of Life,,"Archaea, Bacteria, Protozoa, Chromista, Viruses, Fungi",,,,,,,,
 dr2285,ala,dr2285,,ALA,dr2285,ICN,,New Zealand,Plantae,,,,,,,,
 dr7933,ala,dr7933,,ALA,dr7933,,"Atlas of Living Australia",,,,,,,,,,
 dr18234,ala,dr18234,,ALA,dr18234,,"Department of Agriculture, Water and the Environment",,,,,,,,,,
@@ -19,7 +19,7 @@ dr13266,ala_vernacular_list,dr13266,,ALA,dr13266,,"Senior knowledge holders from
 dr17880,ala_vernacular_list,dr17880,,ALA,dr17880,,,,,,traditionalKnowledge,,,,,,
 dr17886,ala_vernacular_list,dr17886,,ALA,dr17886,,,,,,traditionalKnowledge,,,,,,
 ala-vernacular,ala_vernacular,ALA,,ALA,dr7933,,"Atlas of Living Australia","Australia",,,,,,,,,
-dr649,ala,dr649,,ALA,dr649,,"Atlas of Living Australia","Australian Captal Territory, Australia",,,,,,,,,
+dr649,ala,dr649,,ALA,dr649,,"Atlas of Living Australia","Australian Capital Territory, Australia",,,,,,,,,
 dr656,ala,dr656,,ALA,dr656,,"Atlas of Living Australia","Australia",,,,,,,,,
 dr650,ala,dr650,,ALA,dr650,,"Atlas of Living Australia","New South Wales, Australia",,,,,,,,,
 dr651,ala,dr651,,ALA,dr651,,"Atlas of Living Australia","Northern Territory, Australia",,,,,,,,,
@@ -27,7 +27,7 @@ dr652,ala,dr652,,ALA,dr652,,"Atlas of Living Australia","Queensland, Australia",
 dr653,ala,dr653,,ALA,dr653,,"Atlas of Living Australia","South Australia, Australia",,,,,,,,,
 dr654,ala,dr654,,ALA,dr654,,"Atlas of Living Australia","Tasmania, Australia",,,,,,,,,
 dr655,ala,dr655,,ALA,dr655,,"Atlas of Living Australia","Victoria, Australia",,,,,,,,,
-dr2201,ala,dr2201,,ALA,dr2201,,"Atlas of Living Australia","Western Australia, Australia",,,,,,,,,
+dr467,ala,dr467,,ALA,dr467,,"Atlas of Living Australia","Western Australia, Australia",,,,,,,,,
 dr18987,ala,dr18987,,ALA,dr18987,,"Bonn Convention","Global",,,,,,,,,
 dr18989,ala,dr18989,,ALA,dr18989,,"CAMBA","Global",,,,,,,,,
 dr18988,ala,dr18988,,ALA,dr18988,,"JAMBA","Global",,,,,,,,,
