@@ -44,7 +44,7 @@ class SpeciesListSource(Source):
         errors = Dataset.for_port(self.error)
         fieldmap = dict()
         if 'vernacularName' in self.output.schema.fields:
-            fieldmap['commonname'] = 'vernacularName'
+            fieldmap['commonName'] = 'vernacularName'
             fieldmap['vernacular'] = 'vernacularName'
             fieldmap['common'] = 'vernacularName'
         fieldmap.update({(field.data_key if field.data_key is not None else field.name).lower(): field.name for field in
@@ -69,6 +69,9 @@ class SpeciesListSource(Source):
                         key = key.lower().replace(' ', '')
                     if key is not None and value is not None and key in fieldmap:
                         data[fieldmap[key]] = value
+                # theory - commonName used to be in key value pairs - now appears to be top level property like name
+                if 'commonName' in item:
+                    data["vernacularName"] = item['commonName']
                 data['taxonID'] = idstem + str(line)
                 data['scientificName'] = item['name']
                 data['datasetID'] = item['dataResourceUid']
