@@ -47,6 +47,12 @@ class SpeciesListSource(Source):
             fieldmap['commonName'] = 'vernacularName'
             fieldmap['vernacular'] = 'vernacularName'
             fieldmap['common'] = 'vernacularName'
+        fieldmap['rawkingdom'] = 'kingdom'
+        fieldmap['rawfamily'] = 'family'
+        fieldmap['raworder'] = 'order'
+        fieldmap['rawclass'] = 'class'
+        fieldmap['rawphylum'] = 'phylum'
+        fieldmap['rawrank'] = 'taxonRank'
         fieldmap.update({(field.data_key if field.data_key is not None else field.name).lower(): field.name for field in
                          self.output.schema.fields.values()})
         dr = context.get_default('datasetID')
@@ -65,6 +71,8 @@ class SpeciesListSource(Source):
                 for kv in item.get('kvpValues', []):
                     key: str = kv.get('key', None)
                     value = kv.get('value', None)
+                    # if value == '0':
+                    #     value = ''
                     if key is not None:
                         key = key.lower().replace(' ', '')
                     if key is not None and value is not None and key in fieldmap:
