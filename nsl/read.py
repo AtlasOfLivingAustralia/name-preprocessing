@@ -102,6 +102,10 @@ def fix_repeated_url(url: str) -> str:
     return url[31:]
 
 
+def is_commercial_flora(record: Record):
+    return record.nameType == 'cultivar' or record.nameType == 'cultivar-hybrid'
+
+
 def reader() -> Orchestrator:
     taxon_file = "taxon.csv"
     name_file = "names.csv"
@@ -283,12 +287,20 @@ def additional_reader() -> Orchestrator:
         unused_name = LookupTransform.create('unused_original_name', scientific_name.output, taxon_source.output,
                                              'scientificNameID', 'scientificNameID', lookup_type=IndexType.FIRST,
                                              reject=True, merge=False, record_unmatched=True)
-
+        non_commerical_name = FilterTransform.create('non_commerical_name', unused_name.unmatched,
+                                                     lambda r: not is_commercial_flora(r), record_rejects=True)
         vernacular_source = CsvSource.create('vernacular_source', vernacular_name_file, "excel", common_name_schema,
                                              no_errors=False)
 
+
         # Unplaced names get turned into additional taxa
-        name_rank_lookup = LookupTransform.create("name_rank_lookup", unused_name.unmatched, rank_source.output,
+        # switch to using result of non_commercial_name - for APNI Names
+        # name_rank_lookup = LookupTransform.create("name_rank_lookup", unused_name.unmatched, rank_source.output,
+        #                                           'taxonRank',
+        #                                           'term', reject=True, record_unmatched=True,
+        #                                           lookup_map={'taxonRank': 'mappedTaxonRank',
+        #                                                       'taxonRankLevel': 'taxonRankLevel'})
+        name_rank_lookup = LookupTransform.create("name_rank_lookup", non_commerical_name.output, rank_source.output,
                                                   'taxonRank',
                                                   'term', reject=True, record_unmatched=True,
                                                   lookup_map={'taxonRank': 'mappedTaxonRank',
