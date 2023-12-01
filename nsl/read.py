@@ -18,7 +18,7 @@ from dwc.schema import NomenclaturalCodeMapSchema, DistributionSchema, Establish
 from dwc.transform import DwcIdentifierGenerator, DwcIdentifierTranslator, DwcSyntheticNames, DwcVernacularStatus, \
     DwcDefaultDistribution, DwcClearChildlessFamilies, DwcAddAdditionalAPNIRelationships, DwcAddAdditionalAPNISynonyms
 from nsl.schema import TaxonSchema, NameSchema, CommonNameSchema, RankMapSchema, TaxonomicStatusMapSchema, \
-    OrthVarSchema, RelationshipSchema
+    OrthVarSchema, RelationshipSchema, SimplifiedRelationshipSchema
 
 from nsl.todwc import VernacularToDwcTransform, NslToDwcTaxonTransform, NslAdditionalToDwcTransform
 from processing.dataset import Record, IndexType
@@ -130,6 +130,7 @@ def reader() -> Orchestrator:
     location_map_schema = LocationMapSchema()
     location_schema = LocationSchema()
     vernacular_status_schema = VernacularStatusSchema()
+
 
     with Orchestrator("nsl") as orchestrator:
         taxon_source = CsvSource.create("taxon_source", taxon_file, "excel", taxon_schema, no_errors=False,
@@ -275,8 +276,9 @@ def additional_reader() -> Orchestrator:
     vernacular_status_schema = VernacularStatusSchema()
     orth_var_file = "unplaced_orth_var.csv"
     orth_var_schema = OrthVarSchema()
-    relationship_file = "unplaced_with_relationship.csv"
-    relationship_schema = RelationshipSchema()
+    # relationship_file = "unplaced_with_relationship.csv"
+    relationship_file = "simplified_unplaced.csv"
+    relationship_schema = SimplifiedRelationshipSchema()
 
     with Orchestrator("additional_nsl") as orchestrator:
         taxon_source = CsvSource.create("taxon_source", taxon_file, "excel", taxon_schema, no_errors=False)
@@ -289,6 +291,10 @@ def additional_reader() -> Orchestrator:
         orth_var_source = CsvSource.create("orth_var_source", orth_var_file, "excel", orth_var_schema, no_errors=False)
         relationship_source = CsvSource.create("relationship_source", relationship_file, "excel", relationship_schema,
                                                no_errors=False)
+        relationship_source_cleaned = MapTransform.create("relationship_source_cleaned",
+                                                          relationship_source.output,
+                                                          relationship_schema, {
+                                                              'scientific_name_id': lambda r: fix_repeated_url(r.scientific_name_id)}, auto=True)
         scientific_name = FilterTransform.create('unused_name', names_cleaned.output,
                                                  lambda r: not is_vernacular_name(r), record_rejects=True)
         # Remove anything that already has a name in the placed names
@@ -315,13 +321,15 @@ def additional_reader() -> Orchestrator:
                                                               'taxonRankLevel': 'taxonRankLevel'})
         dwc_base = NslAdditionalToDwcTransform.create("dwc_base", name_rank_lookup.output, 'inferredAccepted')
         dwc_families_filtered = DwcClearChildlessFamilies.create("dwc_families_filtered", dwc_base.output)
-       # dwc_orth_var = DwcAddAdditionalAPNIRelationships.create("dwc_orth_var", dwc_families_filtered.output, orth_var_source.output)
-       # dwc_additional_synonyms = DwcAddAdditionalAPNISynonyms.create("dwc_additional_synonyms", dwc_families_filtered.output, relationship_source.output)
-        #dwc_additional_synonyms = DwcAddAdditionalAPNISynonyms.create("dwc_additional_synonyms", dwc_orth_var.output, relationship_source.output)
-        #dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_base.output)
-        dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_families_filtered.output)
-        #dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_orth_var.output)
-        #dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_additional_synonyms.output)
+        dwc_orth_var = DwcAddAdditionalAPNIRelationships.create("dwc_orth_var", dwc_families_filtered.output, orth_var_source.output)
+        # dwc_additional_synonyms = DwcAddAdditionalAPNISynonyms.create("dwc_additional_synonyms", dwc_families_filtered.output, relationship_source.output)
+        dwc_additional_synonyms = DwcAddAdditionalAPNISynonyms.create("dwc_additional_synonyms",
+                                                                      dwc_orth_var.output,
+                                                                      relationship_source_cleaned.output)
+        # dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_base.output)
+        # dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_families_filtered.output)
+        # dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_orth_var.output)
+        dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_additional_synonyms.output)
         dwc_output = CsvSink.create("dwc_output", dwc_taxon.output, "taxon.csv", "excel", reduce=True)
         vernacular_dwc = VernacularToDwcTransform.create('vernacular_dwc', vernacular_source.output,
                                                          dwc_taxon.output, 'scientificNameID',

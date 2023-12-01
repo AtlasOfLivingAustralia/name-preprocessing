@@ -146,7 +146,7 @@ class OrthVarSchema(Schema):
     accepted_name_usage = fields.String()
 class RelationshipSchema(Schema):
     instance_type = fields.String()
-    name_id = fields.String()
+    scientific_name_id = fields.String()
     scientific_name = fields.String()
     nomenclatural_status = fields.String()
     name_published_in_year = fields.String()
@@ -209,3 +209,13 @@ class RelationshipSchema(Schema):
     name_space = fields.String()
     tree_description = fields.String()
     tree_label = fields.String()
+
+class SimplifiedRelationshipSchema(Schema):
+    scientific_name_id = fields.String()
+    scientific_name = fields.String()
+    apc_taxon_status = fields.String()
+    relationship = fields.String()
+    full_name = fields.String()
+    second_name_id = fields.String()
+    apc_relationship = fields.String()
+    accepted_name_usage_id = fields.String()

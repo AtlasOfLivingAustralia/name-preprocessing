@@ -82,6 +82,8 @@ class DwcTaxonValidate(ThroughTransform):
             return
         errors.append(f"Invalid scientific name {name}")
 
+
+
     def execute(self, context: ProcessingContext):
         data = context.acquire(self.input)
         index = Index.create(data, self.taxon_keys, IndexType.UNIQUE)
@@ -663,12 +665,14 @@ class DwcAddAdditionalAPNIRelationships(ThroughTransform):
                 if record.taxonID in reference_lookup:
                     modified = Record.copy(record)
                   #  modified.data['acceptedNameUsage'] = reference_lookup[record.taxonID][0]
-                    modified.data['acceptedNameUseageID'] = reference_lookup[record.taxonID][2]
-                    modified.data['taxonomicStatus'] = reference_lookup[record.taxonID][1]
-                    modified.data['family'] = None
-                    modified.data['genus'] = None
-                    modified.data['specificEpithet'] = None
-                    modified.data['infraspecificEpithet'] = None
+                    modified.data['acceptedNameUsageID'] = reference_lookup[record.taxonID][2]
+                    modified.data['taxonomicStatus'] = "synonym" # reference_lookup[record.taxonID][1]
+                    # commented below out as it leads to the items being unplaced if
+                    # the merge process doesn't accept the nameuseageid
+                    # modified.data['family'] = None
+                    # modified.data['genus'] = None
+                    # modified.data['specificEpithet'] = None
+                    # modified.data['infraspecificEpithet'] = None
                     result.add(modified)
                     # accepted_record = Record.copy(record)
                     # accepted_record.data['scientificName'] = reference_lookup[record.taxonID][0]
@@ -696,7 +700,8 @@ class DwcAddAdditionalAPNIRelationships(ThroughTransform):
 class DwcAddAdditionalAPNISynonyms(ThroughTransform):
     """Add in references to AcceptedNames where additional information has been provided by APNI"""
     """Two separate files - one for orthographic variants and one for other relationships"""
-    """Starting with the orth-variant file"""
+    """This works with the other relationship file"""
+    """Needs to check that the any names id that's used as an accepted name id is still in the set"""
 
     reference: Port = attr.ib()
 
@@ -711,6 +716,7 @@ class DwcAddAdditionalAPNISynonyms(ThroughTransform):
         result = Dataset.for_port(self.output)
         errors = Dataset.for_port(self.error)
         reference_lookup = {}
+        valid_taxon_name_ids = []
         relationship_rows = []
         accepted_rows = []
         synonym_rows = []
@@ -726,12 +732,27 @@ class DwcAddAdditionalAPNISynonyms(ThroughTransform):
         #     return {"taxonId": taxon_id, "scientificName": scientific_name, "taxonRank": taxon_rank,
         #             "taxonomyStatus": taxonomy_status, "acceptedNameUsage": accepted_name_usage,
         #             "acceptedNameUsageId": accepted_name_usage_id}
-        taxonID_prefix = "https://id.biodiversity.org.au/name/apni/" # used as only id is supplied in this file.
+
+        taxonID_prefix = "https://id.biodiversity.org.au/name/apni/"  # used as only id is supplied in this file.
+
+        # Updated to use simplifed unplace file - with this schema    28/11/2023
+        #     scientific_name_id = fields.String()
+        #     scientific_name = fields.String()
+        #     apc_taxon_status = fields.String()
+        #     relationship = fields.String()
+        #     full_name = fields.String()
+        #     second_name_id = fields.String()
+        #     apc_relationship = fields.String()
+        #     accepted_name_usage_id = fields.String()
+        # second_name_id is a full URL.
+
+        for record in data.rows:  # make a list of currently valid name ids
+            valid_taxon_name_ids.append(record.taxonID)
 
         for record in reference_data.rows:  # generate a reference lookup for the synonym relationships
             if record.relationship:  # Filter out the rows that have relationships
 
-                if not record.accepted_name_usage:  # both are unplaced Rule 2
+                if not record.accepted_name_usage_id:  # both are unplaced Rule 2
                     # accepted_entry = result_dictionary(r_entry.name_id,
                     #                                    r_entry.scientific_name,
                     #                                    "",
@@ -745,8 +766,8 @@ class DwcAddAdditionalAPNISynonyms(ThroughTransform):
                     #                                   "synonym",
                     #                                   r_entry.scientific_name,
                     #                                   r_entry.name_id)
-                    reference_values = [taxonID_prefix + record.name_id, "synonym"]
-                    reference_lookup[taxonID_prefix + record.syn_name_id] = reference_values
+                    reference_values = [record.scientific_name_id, "synonym"]
+                    reference_lookup[record.second_name_id] = reference_values
 
                     # synonym_entry_key = synonym_entry["scientificName"] + "|" + synonym_entry["acceptedNameUsageId"]
                     # duplicate_synonym_store_key = synonym_entry["taxonId"] + "|" + synonym_entry["scientificName"]
@@ -768,7 +789,7 @@ class DwcAddAdditionalAPNISynonyms(ThroughTransform):
                                 "synonym" not in record.apc_relationship):
                             taxon_status_type = record.apc_relationship  # rule 3 => this changes synonym to missapplied,etc
                         reference_values = [record.accepted_name_usage_id, taxon_status_type]
-                        reference_lookup[taxonID_prefix + record.name_id] = reference_values
+                        reference_lookup[record.scientific_name_id] = reference_values
                         # synonym_entry = result_dictionary(r_entry["name_id"],
                         #                                   r_entry["scientific_name"],
                         #                                   "",
@@ -776,13 +797,17 @@ class DwcAddAdditionalAPNISynonyms(ThroughTransform):
                         #                                   r_entry["accepted_name_usage"],
                         #                                   r_entry["accepted_name_usage_id"])
 
-        for record in data.rows:  # if record has an matching reference lookup, add accepted name and status
+        for record in data.rows:  # if record has a matching reference lookup, add accepted name and status
             try:
                 if record.taxonID in reference_lookup:
-                    modified = Record.copy(record)
-                    modified.data['acceptedNameUsageID'] = reference_lookup[record.taxonID][0]
-                    modified.data['taxonomicStatus'] = reference_lookup[record.taxonID][1]
-                    result.add(modified)
+                    # if accepted_name_id is a name/apni reference, need to check it hasn't been removed already.
+                    if "name/apni" not in reference_lookup[record.taxonID][0] or \
+                            ("name/apni" in reference_lookup[record.taxonID][0] and
+                             reference_lookup[record.taxonID][0] in valid_taxon_name_ids):
+                        modified = Record.copy(record)
+                        modified.data['acceptedNameUsageID'] = reference_lookup[record.taxonID][0]
+                        modified.data['taxonomicStatus'] = reference_lookup[record.taxonID][1]
+                        result.add(modified)
                 else:  # no match copy record as is
                     result.add(record)
             except Exception as err:
