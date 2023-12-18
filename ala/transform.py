@@ -52,6 +52,7 @@ class SpeciesListSource(Source):
         fieldmap['raworder'] = 'order'
         fieldmap['rawclass'] = 'class_'
         fieldmap['rawphylum'] = 'phylum'
+        fieldmap['rawgenus'] = 'genus'
         fieldmap['rawrank'] = 'taxonRank'
         fieldmap.update({(field.data_key if field.data_key is not None else field.name).lower(): field.name for field in
                          self.output.schema.fields.values()})

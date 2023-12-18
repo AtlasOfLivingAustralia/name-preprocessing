@@ -666,7 +666,7 @@ class DwcAddAdditionalAPNIRelationships(ThroughTransform):
                     modified = Record.copy(record)
                   #  modified.data['acceptedNameUsage'] = reference_lookup[record.taxonID][0]
                     modified.data['acceptedNameUsageID'] = reference_lookup[record.taxonID][2]
-                    modified.data['taxonomicStatus'] = "synonym" # reference_lookup[record.taxonID][1]
+                    modified.data['taxonomicStatus'] = "unreviewedSynonym" # reference_lookup[record.taxonID][1]
                     # commented below out as it leads to the items being unplaced if
                     # the merge process doesn't accept the nameuseageid
                     # modified.data['family'] = None
@@ -766,7 +766,7 @@ class DwcAddAdditionalAPNISynonyms(ThroughTransform):
                     #                                   "synonym",
                     #                                   r_entry.scientific_name,
                     #                                   r_entry.name_id)
-                    reference_values = [record.scientific_name_id, "synonym"]
+                    reference_values = [record.scientific_name_id, "unreviewedSynonym"]
                     reference_lookup[record.second_name_id] = reference_values
 
                     # synonym_entry_key = synonym_entry["scientificName"] + "|" + synonym_entry["acceptedNameUsageId"]
@@ -784,9 +784,10 @@ class DwcAddAdditionalAPNISynonyms(ThroughTransform):
                     # don't need to create accepted entry as the accepted entry is in the taxonomy
                     # but need to consider rule 3 and 4
                     if record.apc_relationship != "excluded":  # ignore this row if excluded -> rule 4
-                        taxon_status_type = "synonym"
-                        if (record.apc_relationship != "accepted") and (
-                                "synonym" not in record.apc_relationship):
+                        taxon_status_type = "unreviewedSynonym"
+                       # if (record.apc_relationship != "accepted") and (
+                       #         "synonym" not in record.apc_relationship):
+                        if "misapplied" in record.apc_relationship:  # change to make everything a synonym except misapplied
                             taxon_status_type = record.apc_relationship  # rule 3 => this changes synonym to missapplied,etc
                         reference_values = [record.accepted_name_usage_id, taxon_status_type]
                         reference_lookup[record.scientific_name_id] = reference_values
