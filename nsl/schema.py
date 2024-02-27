@@ -213,6 +213,7 @@ class RelationshipSchema(Schema):
 class SimplifiedRelationshipSchema(Schema):
     scientific_name_id = fields.String()
     scientific_name = fields.String()
+    nomenclatural_status = fields.String()
     apc_taxon_status = fields.String()
     relationship = fields.String()
     full_name = fields.String()

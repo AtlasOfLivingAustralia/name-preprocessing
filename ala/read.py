@@ -88,6 +88,7 @@ def vernacular_list_reader() -> Orchestrator:
             'vernacular name': 'vernacularName',
             'Birdlife Common Name': 'vernacularName',
             'preferred Vernacular Name': 'vernacularName',
+            'Preferred Vernacular Name': 'vernacularName',
             'Population': 'establishmentMeans',
             'Notes': 'taxonRemarks'
         })
