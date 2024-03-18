@@ -9,7 +9,7 @@ lichens,nsl,Lichens,,"Lichens,NSL",dr17664,ICN,Australian Biological Resources S
 caab,caab_standard,CAAB,,,dr2704,,CSIRO,,,https://www.marine.csiro.au/data/caab/taxon_report.cfm?caab_code=,,,,,,,
 caab_code,caab_code,CAABCode,CAAB,CAAB,dr2704,,CSIRO,,,https://www.marine.csiro.au/data/caab/taxon_report.cfm?caab_code=,,,,,,,
 nzor,nzor,NZOR,,,dr2707,,Landcare Research,New Zealand,,,,,,http://vocab.getty.edu/tgn/1000226,,NZ,
-col,col,CoL,,,dr2705,,The Catalogue of Life,,"Archaea, Bacteria, Protozoa, Chromista, Virusesm Fungi",,,,,,,,
+col,col,CoL,,,dr2705,,The Catalogue of Life,,"Archaea, Bacteria, Protozoa, Chromista, Viruses, Fungi",,,,,,,,
 dr7933,ala,dr7933,,ALA,dr7933,,Atlas of Living Australia,,,,,,,,,,
 dr13266,ala_vernacular_list,dr13266,,ALA,dr13266,,"Senior knowledge holders from the Gamilaraay, Yuwaalaraay & Yuwaalayaay languages",,,,traditionalKnowledge,,,,,,
 dr17880,ala_vernacular_list,dr17880,,ALA,dr17880,,,,,,traditionalKnowledge,,,,,,
