@@ -16,8 +16,10 @@ from dwc.meta import MetaFile, EmlFile
 from dwc.schema import NomenclaturalCodeMapSchema, DistributionSchema, EstablishmentMeansMapSchema, LocationMapSchema, \
     LocationSchema, VernacularStatusSchema
 from dwc.transform import DwcIdentifierGenerator, DwcIdentifierTranslator, DwcSyntheticNames, DwcVernacularStatus, \
-    DwcDefaultDistribution
-from nsl.schema import TaxonSchema, NameSchema, CommonNameSchema, RankMapSchema, TaxonomicStatusMapSchema
+    DwcDefaultDistribution, DwcClearChildlessFamilies, DwcAddAdditionalAPNIRelationships, DwcAddAdditionalAPNISynonyms
+from nsl.schema import TaxonSchema, NameSchema, CommonNameSchema, RankMapSchema, TaxonomicStatusMapSchema, \
+    OrthVarSchema, RelationshipSchema, SimplifiedRelationshipSchema
+
 from nsl.todwc import VernacularToDwcTransform, NslToDwcTaxonTransform, NslAdditionalToDwcTransform
 from processing.dataset import Record, IndexType
 from processing.orchestrate import Orchestrator
@@ -100,6 +102,22 @@ def fix_repeated_url(url: str) -> str:
     if url is None or not url.startswith('https://id.biodiversity.org.au/https://id.biodiversity.org.au'):
         return url
     return url[31:]
+
+
+def is_commercial_flora(record: Record):
+    return record.nameType == 'cultivar' or record.nameType == 'cultivar-hybrid'
+
+
+def is_unlinked_orthvar(record: Record):
+    if "orth. var." in str(record.nomenclaturalStatus) or "isonym" in str(record.nomenclaturalStatus) \
+            or "nom. illeg" in str(record.nomenclaturalStatus) or "nom. superfl." in str(record.nomenclaturalStatus) \
+            or "nom. inval." in str(record.nomenclaturalStatus) or "nom. nud." in str(record.nomenclaturalStatus):
+        if record.acceptedNameUsageID:  # should evaluate as false if field empty
+            return False
+        else:
+            return True
+    else:
+        return False
 
 
 def reader() -> Orchestrator:
@@ -267,6 +285,11 @@ def additional_reader() -> Orchestrator:
     taxon_schema = TaxonSchema()
     vernacular_status_file = "Vernacular_Status.csv"
     vernacular_status_schema = VernacularStatusSchema()
+    orth_var_file = "unplaced_orth_var.csv"
+    orth_var_schema = OrthVarSchema()
+    # relationship_file = "unplaced_with_relationship.csv"
+    relationship_file = "simplified_unplaced.csv"
+    relationship_schema = SimplifiedRelationshipSchema()
 
     with Orchestrator("additional_nsl") as orchestrator:
         taxon_source = CsvSource.create("taxon_source", taxon_file, "excel", taxon_schema, no_errors=False)
@@ -276,26 +299,61 @@ def additional_reader() -> Orchestrator:
             'scientificNameID': lambda r: fix_repeated_url(r.scientificNameID),
             'ccAttributionIRI': lambda r: fix_repeated_url(r.ccAttributionIRI)
         }, auto=True)
-
+        orth_var_source = CsvSource.create("orth_var_source", orth_var_file, "excel", orth_var_schema, no_errors=False)
+        relationship_source = CsvSource.create("relationship_source", relationship_file, "excel", relationship_schema,
+                                               no_errors=False)
+        relationship_source_cleaned = MapTransform.create("relationship_source_cleaned",
+                                                          relationship_source.output,
+                                                          relationship_schema, {
+                                                              'scientific_name_id': lambda r: fix_repeated_url(
+                                                                  r.scientific_name_id)}, auto=True)
         scientific_name = FilterTransform.create('unused_name', names_cleaned.output,
                                                  lambda r: not is_vernacular_name(r), record_rejects=True)
         # Remove anything that already has a name in the placed names
-        unused_name = LookupTransform.create('unused_original_name', scientific_name.output, taxon_source.output,
-                                             'scientificNameID', 'scientificNameID', lookup_type=IndexType.FIRST,
-                                             reject=True, merge=False, record_unmatched=True)
-
+        # unused_name = LookupTransform.create('unused_original_name', scientific_name.output, taxon_source.output,
+        #                                      'scientificNameID', 'scientificNameID', lookup_type=IndexType.FIRST,
+        #                                      reject=True, merge=False, record_unmatched=True)
+        non_commerical_name = FilterTransform.create('non_commerical_name', scientific_name.output,
+                                                     lambda r: not is_commercial_flora(r), record_rejects=True)
         vernacular_source = CsvSource.create('vernacular_source', vernacular_name_file, "excel", common_name_schema,
                                              no_errors=False)
 
         # Unplaced names get turned into additional taxa
-        name_rank_lookup = LookupTransform.create("name_rank_lookup", unused_name.unmatched, rank_source.output,
+        # switch to using result of non_commercial_name - for APNI Names
+        # name_rank_lookup = LookupTransform.create("name_rank_lookup", unused_name.unmatched, rank_source.output,
+        #                                           'taxonRank',
+        #                                           'term', reject=True, record_unmatched=True,
+        #                                           lookup_map={'taxonRank': 'mappedTaxonRank',
+        #                                                       'taxonRankLevel': 'taxonRankLevel'})
+        name_rank_lookup = LookupTransform.create("name_rank_lookup", non_commerical_name.output, rank_source.output,
                                                   'taxonRank',
                                                   'term', reject=True, record_unmatched=True,
                                                   lookup_map={'taxonRank': 'mappedTaxonRank',
                                                               'taxonRankLevel': 'taxonRankLevel'})
-        dwc_base = NslAdditionalToDwcTransform.create("dwc_base", name_rank_lookup.output, 'inferredAccepted')
-        dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_base.output)
-        dwc_output = CsvSink.create("dwc_output", dwc_taxon.output, "taxon.csv", "excel", reduce=True)
+        dwc_base = NslAdditionalToDwcTransform.create("dwc_base", name_rank_lookup.output, 'unreviewed')
+        dwc_families_filtered = DwcClearChildlessFamilies.create("dwc_families_filtered", dwc_base.output)
+        dwc_orth_var = DwcAddAdditionalAPNIRelationships.create("dwc_orth_var", dwc_families_filtered.output,
+                                                                orth_var_source.output)
+        # dwc_additional_synonyms = DwcAddAdditionalAPNISynonyms.create("dwc_additional_synonyms", dwc_families_filtered.output, relationship_source.output)
+        dwc_additional_synonyms = DwcAddAdditionalAPNISynonyms.create("dwc_additional_synonyms",
+                                                                      dwc_orth_var.output,
+                                                                      relationship_source_cleaned.output)
+        dwc_unlinked_orthvar_filtered = FilterTransform.create("dwc_unlinked_orthvar_filtered",
+                                                               dwc_additional_synonyms.output,
+                                                               lambda r: not is_unlinked_orthvar(r),
+                                                               record_rejects=True)
+        # dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_base.output)
+        # dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_families_filtered.output)
+        # dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_orth_var.output)
+        # dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_additional_synonyms.output)
+        dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_unlinked_orthvar_filtered.output)
+        # dwc_output = CsvSink.create("dwc_output", dwc_taxon.output, "taxon.csv", "excel", reduce=True)
+        # Moved removing names in the taxon file till after the synthetic names are generated.
+        unused_name = LookupTransform.create('unused_original_name', dwc_taxon.output, taxon_source.output,
+                                             'scientificNameID', 'scientificNameID', lookup_type=IndexType.FIRST,
+                                             reject=True, merge=False, record_unmatched=True)
+        dwc_output = CsvSink.create("dwc_output", unused_name.unmatched, "taxon.csv", "excel", reduce=True)
+
         vernacular_dwc = VernacularToDwcTransform.create('vernacular_dwc', vernacular_source.output,
                                                          dwc_taxon.output, 'scientificNameID',
                                                          'scientific_name_id')

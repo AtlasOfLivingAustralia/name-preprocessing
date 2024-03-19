@@ -82,6 +82,8 @@ class DwcTaxonValidate(ThroughTransform):
             return
         errors.append(f"Invalid scientific name {name}")
 
+
+
     def execute(self, context: ProcessingContext):
         data = context.acquire(self.input)
         index = Index.create(data, self.taxon_keys, IndexType.UNIQUE)
@@ -323,7 +325,11 @@ class DwcTaxonParent(ThroughTransform):
                     if author and name.endswith(author):
                         name = name[0:-len(author)].strip()
                     if composed.kingdom is None and ((kingdom_index is None and rank == 'kingdom') or (
-                            kingdom_index is not None and kingdom_index.findByKey(name) is not None)):
+                            kingdom_index is not None and kingdom_index.findByKey(name) is not None
+                            and (rank == 'kingdom' or rank == 'unranked'))):
+                        # kingdom rank is  the fix for Bacteria -
+                        # unranked is to overcome a problem that rank of kingdom creates with Viruses
+                        # fix for Issue #14 - https://github.com/AtlasOfLivingAustralia/name-preprocessing/issues/14
                         composed.data['kingdom'] = name
                     elif rank == 'phylum' and composed.phylum is None:
                         composed.data['phylum'] = name
@@ -596,6 +602,222 @@ class DwcAncestorIdentifierGenerator(Transform):
         id = self.taxon_keys.get(ancestor)
         (composed, _id) = self.translator.translate(context, ancestor, parent_id, id)
         return composed
+
+
+@attr.s
+class DwcClearChildlessFamilies(ThroughTransform):
+    """Remove family records that have no children"""
+
+    @classmethod
+    def create(cls, id: str, input: Port, **kwargs):
+        output = Port.port(input.schema)
+        return DwcClearChildlessFamilies(id, input, output, None, **kwargs)
+
+    def execute(self, context: ProcessingContext):
+        data = context.acquire(self.input)
+        result = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        families = set()
+        for record in data.rows:  # generate list of families that are used in the data set
+            if record.family is not None:
+                families.add(record.family)
+        for record in data.rows:  # remove and entry with a rank of family from output
+            try:
+                if "family" in record.taxonRank:
+                    if record.scientificName in families:  # if scientific name not in family list, excluded
+                        result.add(record)
+                else:  # not a family record, ignore.
+                    result.add(record)
+            except Exception as err:
+                if self.fail_on_exception:
+                    raise err
+                self.count(self.ERROR_COUNT, record, context)
+                errors.add(Record.error(record, err))
+        context.save(self.output, result)
+        context.save(self.error, errors)
+
+
+@attr.s
+class DwcAddAdditionalAPNIRelationships(ThroughTransform):
+    """Add in references to AcceptedNames where additional information has been provided by APNI"""
+    """Two separate files - one for orthographic variants and one for other relationships"""
+    """Starting with the orth-variant file"""
+
+    reference: Port = attr.ib()
+
+    @classmethod
+    def create(cls, id: str, input: Port, reference: Port, **kwargs):
+        output = Port.port(input.schema)
+        return DwcAddAdditionalAPNIRelationships(id, input, output, None, reference, **kwargs)
+
+    def execute(self, context: ProcessingContext):
+        data = context.acquire(self.input)
+        reference_data = context.acquire(self.reference)
+        result = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        reference_lookup = {}
+        for record in reference_data.rows:  # generate a reference lookup for the orth var
+            reference_values = [record.accepted_name_usage, record.apc_relationship, record.accepted_name_usage_id]
+            reference_lookup[record.scientific_name_id] = reference_values
+
+        for record in data.rows:  # if record has an matching reference lookup, add accepted name and status
+            try:
+                if record.taxonID in reference_lookup:
+                    modified = Record.copy(record)
+                  #  modified.data['acceptedNameUsage'] = reference_lookup[record.taxonID][0]
+                    modified.data['acceptedNameUsageID'] = reference_lookup[record.taxonID][2]
+                    modified.data['taxonomicStatus'] = "unreviewedSynonym" # reference_lookup[record.taxonID][1]
+                    # commented below out as it leads to the items being unplaced if
+                    # the merge process doesn't accept the nameuseageid
+                    # modified.data['family'] = None
+                    # modified.data['genus'] = None
+                    # modified.data['specificEpithet'] = None
+                    # modified.data['infraspecificEpithet'] = None
+                    result.add(modified)
+                    # accepted_record = Record.copy(record)
+                    # accepted_record.data['scientificName'] = reference_lookup[record.taxonID][0]
+                    # accepted_record.data['taxonomicStatus'] = "accepted"
+                    # accepted_record.data['taxonID'] = reference_lookup[record.taxonID][2]
+                    # accepted_record.data['family'] = None
+                    # accepted_record.data['genus'] = None
+                    # accepted_record.data['specificEpithet'] = None
+                    # accepted_record.data['infraspecificEpithet'] = None
+                    # accepted_record.data['scientificNameAuthor'] = ''
+                    # accepted_record.data['datasetID'] = 'dr5214'
+                    # result.add(accepted_record)
+                else:  # no match copy record as is
+                    result.add(record)
+            except Exception as err:
+                if self.fail_on_exception:
+                    raise err
+                self.count(self.ERROR_COUNT, record, context)
+                errors.add(Record.error(record, err))
+        context.save(self.output, result)
+        context.save(self.error, errors)
+
+
+@attr.s
+class DwcAddAdditionalAPNISynonyms(ThroughTransform):
+    """Add in references to AcceptedNames where additional information has been provided by APNI"""
+    """Two separate files - one for orthographic variants and one for other relationships"""
+    """This works with the other relationship file"""
+    """Needs to check that the any names id that's used as an accepted name id is still in the set"""
+
+    reference: Port = attr.ib()
+
+    @classmethod
+    def create(cls, id: str, input: Port, reference: Port, **kwargs):
+        output = Port.port(input.schema)
+        return DwcAddAdditionalAPNISynonyms(id, input, output, None, reference, **kwargs)
+
+    def execute(self, context: ProcessingContext):
+        data = context.acquire(self.input)
+        reference_data = context.acquire(self.reference)
+        result = Dataset.for_port(self.output)
+        errors = Dataset.for_port(self.error)
+        reference_lookup = {}
+        valid_taxon_name_ids = []
+        relationship_rows = []
+        accepted_rows = []
+        synonym_rows = []
+
+        output_rows = []
+        key_store = {}  # key of form taxonId|acceptedNameUsageId to eliminate duplicates
+        accepted_key_store = {}  # store for simple taxonID|Name key
+        synonym_key_store = {}
+        duplicate_synonym_store = {}
+
+        # def result_dictionary(taxon_id, scientific_name, taxon_rank, taxonomy_status, accepted_name_usage,
+        #                       accepted_name_usage_id):
+        #     return {"taxonId": taxon_id, "scientificName": scientific_name, "taxonRank": taxon_rank,
+        #             "taxonomyStatus": taxonomy_status, "acceptedNameUsage": accepted_name_usage,
+        #             "acceptedNameUsageId": accepted_name_usage_id}
+
+        taxonID_prefix = "https://id.biodiversity.org.au/name/apni/"  # used as only id is supplied in this file.
+
+        # Updated to use simplifed unplace file - with this schema    28/11/2023
+        #     scientific_name_id = fields.String()
+        #     scientific_name = fields.String()
+        #     apc_taxon_status = fields.String()
+        #     relationship = fields.String()
+        #     full_name = fields.String()
+        #     second_name_id = fields.String()
+        #     apc_relationship = fields.String()
+        #     accepted_name_usage_id = fields.String()
+        # second_name_id is a full URL.
+
+        for record in data.rows:  # make a list of currently valid name ids
+            valid_taxon_name_ids.append(record.taxonID)
+
+        for record in reference_data.rows:  # generate a reference lookup for the synonym relationships
+            if record.relationship:  # Filter out the rows that have relationships
+
+                if not record.accepted_name_usage_id:  # both are unplaced Rule 2
+                    # accepted_entry = result_dictionary(r_entry.name_id,
+                    #                                    r_entry.scientific_name,
+                    #                                    "",
+                    #                                    "unreviewed",
+                    #                                    r_entry.scientific_name,
+                    #                                    r_entry.name_id)
+
+                    # synonym_entry = result_dictionary(r_entry.syn_name_id,
+                    #                                   r_entry.full_name,
+                    #                                   "",
+                    #                                   "synonym",
+                    #                                   r_entry.scientific_name,
+                    #                                   r_entry.name_id)
+                    reference_values = [record.scientific_name_id, "unreviewedSynonym"]
+                    reference_lookup[record.second_name_id] = reference_values
+
+                    # synonym_entry_key = synonym_entry["scientificName"] + "|" + synonym_entry["acceptedNameUsageId"]
+                    # duplicate_synonym_store_key = synonym_entry["taxonId"] + "|" + synonym_entry["scientificName"]
+                    #
+                    # if synonym_entry_key not in key_store:
+                    #     # output_rows.append(synonym_entry)
+                    #     synonym_rows.append(synonym_entry)
+                    #     key_store[synonym_entry_key] = True
+                    #     if duplicate_synonym_store_key not in duplicate_synonym_store:
+                    #         duplicate_synonym_store[duplicate_synonym_store_key] = 1
+                    #     else:
+                    #         duplicate_synonym_store[duplicate_synonym_store_key] += 1
+                else:
+                    # don't need to create accepted entry as the accepted entry is in the taxonomy
+                    # but need to consider rule 3 and 4
+                    if record.apc_relationship != "excluded":  # ignore this row if excluded -> rule 4
+                        taxon_status_type = "unreviewedSynonym"
+                       # if (record.apc_relationship != "accepted") and (
+                       #         "synonym" not in record.apc_relationship):
+                        if "misapplied" in record.apc_relationship:  # change to make everything a synonym except misapplied
+                            taxon_status_type = record.apc_relationship  # rule 3 => this changes synonym to missapplied,etc
+                        reference_values = [record.accepted_name_usage_id, taxon_status_type]
+                        reference_lookup[record.scientific_name_id] = reference_values
+                        # synonym_entry = result_dictionary(r_entry["name_id"],
+                        #                                   r_entry["scientific_name"],
+                        #                                   "",
+                        #                                   taxon_status_type,
+                        #                                   r_entry["accepted_name_usage"],
+                        #                                   r_entry["accepted_name_usage_id"])
+
+        for record in data.rows:  # if record has a matching reference lookup, add accepted name and status
+            try:
+                if record.taxonID in reference_lookup:
+                    # if accepted_name_id is a name/apni reference, need to check it hasn't been removed already.
+                    if "name/apni" not in reference_lookup[record.taxonID][0] or \
+                            ("name/apni" in reference_lookup[record.taxonID][0] and
+                             reference_lookup[record.taxonID][0] in valid_taxon_name_ids):
+                        modified = Record.copy(record)
+                        modified.data['acceptedNameUsageID'] = reference_lookup[record.taxonID][0]
+                        modified.data['taxonomicStatus'] = reference_lookup[record.taxonID][1]
+                        result.add(modified)
+                else:  # no match copy record as is
+                    result.add(record)
+            except Exception as err:
+                if self.fail_on_exception:
+                    raise err
+                self.count(self.ERROR_COUNT, record, context)
+                errors.add(Record.error(record, err))
+        context.save(self.output, result)
+        context.save(self.error, errors)
 
 
 @attr.s
