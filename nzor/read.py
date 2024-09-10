@@ -121,7 +121,9 @@ def reader() -> Orchestrator:
                                           lookup_map={'taxonRank': 'taxonRank1'})
     taxon_ranked_2 = LookupTransform.create("taxon_ranked_2", taxon_ranked.output, rank_map.output, 'taxonRank', 'rank',
                                             lookup_type=IndexType.FIRST, lookup_map={'taxonRank': 'taxonRank2'})
-    taxon_rewrite = MapTransform.create("taxon_rewrite", taxon_ranked_2.output, TaxonSchema(), {
+
+
+    taxon_rewrite = MapTransform.create("taxon_rewrite", taxon_ranked_2 .output, TaxonSchema(), {
         'datasetID': MapTransform.default('datasetID'),
         'parentNameUsageID': (lambda r: r.parentNameUsageID if r.taxonID == r.acceptedNameUsageID else None),
         'acceptedNameUsageID': (lambda r: r.acceptedNameUsageID if r.taxonID != r.acceptedNameUsageID else None),
@@ -141,7 +143,10 @@ def reader() -> Orchestrator:
         'kingdom': (lambda r: clean_uninomial(r.kingdom)),
         'source': 'scientificNameID'
     }, auto=True)
-    taxon_output = CsvSink.create("taxon_output", taxon_rewrite.output, "taxon.csv", "excel", reduce=True)
+    taxon_filtered = FilterTransform.create("taxon_filtered", taxon_rewrite.output,
+                                            lambda r: r.kingdom != 'Animalia')
+    taxon_output = CsvSink.create("taxon_output", taxon_filtered.output, "taxon.csv", "excel", reduce=True)
+    #taxon_output = CsvSink.create("taxon_output", taxon_rewrite.output, "taxon.csv", "excel", reduce=True)
     vernacular_source = CsvSource.create("vernacular_source", vernacular_file, 'excel-tab', nzor_vernacular_schema,
                                          no_errors=False)
     vernacular_mapped = LookupTransform.create('vernacular_mapped', vernacular_source.output, language_map.output,
@@ -206,6 +211,7 @@ def reader() -> Orchestrator:
                                     taxon_ranked,
                                     taxon_ranked_2,
                                     taxon_rewrite,
+                                    taxon_filtered,
                                     taxon_output,
                                     vernacular_source,
                                     vernacular_mapped,

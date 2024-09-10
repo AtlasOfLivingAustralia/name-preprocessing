@@ -212,6 +212,7 @@ class NslAdditionalToDwcTransform(ThroughTransform):
             kingdom = 'Plantae' if record.taxonRankLevel > 200 else None
         dwc = {
             'taxonID': taxonID,
+            'acceptedNameUsageID': None,
             'datasetID': context.get_default('datasetID'),
             'nomenclaturalCode': record.nomenclaturalCode,
             'scientificName': scientificName,
