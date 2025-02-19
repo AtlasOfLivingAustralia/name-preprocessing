@@ -136,7 +136,11 @@ class NslToDwcTaxonTransform(ThroughTransform):
         scientificName = choose(record.name_canonicalName, record.canonicalName)
         if scientificName is None:
             raise ProcessingException("Record has no scientific name")
-        taxonRank = record.mappedTaxonRank
+        taxonRank = ""
+        if record.mappedTaxonRank:
+            taxonRank = record.mappedTaxonRank
+        else:
+            taxonRank = record.taxonRank
         nameFormatted = self.formatter.format(record.name_scientificNameHTML, taxonRank)
         dwc = {
             'taxonID': taxonID,

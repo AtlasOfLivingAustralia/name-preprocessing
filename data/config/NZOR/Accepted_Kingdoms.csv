@@ -1,0 +1,6 @@
+kingdom,taxonID,useDistribution,useDataset,useRank
+# For use with genus-level data
+
+Chomista,NZOR-6-110964,false,false,false
+Plantae,NZOR-6-60501,false,false,true
+Fungi,NZOR-6-121877,false,false,true

@@ -1,10 +1,13 @@
 rank,nomenclaturalCode,taxonRank
+?,,unranked
+a,,unranked
 anamorph,,anamorph
 biovar,,biovar
 class,,class
 cv,,cultivar
-Division,ICZN,division zoology
+d,,unranked
 Division,ICBN,division botany
+Division,ICZN,division zoology
 f.,,form
 family,,family
 f.sp.,,formaspecialis
@@ -41,3 +44,7 @@ superorder,,superorder
 supertribe,,supertribe
 tribe,,tribe
 var.,,variety
+ß,,unranked
+
+
+

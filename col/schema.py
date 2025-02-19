@@ -54,6 +54,15 @@ class ColTaxonSchema(Schema):
     nomenclaturalStatus = fields.String(missing=None, data_key = 'dwc:nomenclaturalStatus')
     taxonRemarks = fields.String(missing=None, data_key = 'dwc:taxonRemarks')
     references = fields.String(missing=None, data_key = 'dcterms:references')
+    superFamily = fields.String(missing=None, data_key='dwc:superfamily')
+    order = fields.String(missing=None, data_key='dwc:order')
+    kingdom = fields.String(missing=None, data_key='dwc:kingdom')
+    phylum = fields.String(missing=None, data_key='dwc:phylum')
+    class_ = fields.String(missing=None, data_key='dwc:class')
+    family = fields.String(missing=None, data_key='dwc:family')
+    subfamily = fields.String(missing=None, data_key='dwc:subfamily')
+    tribe = fields.String(missing=None, data_key='dwc:tribe')
+    # fields superFamily, order, kingdom, phylum, class, family, subfamily, and tribe added for GitHub issue #17
 
     class Meta:
         ordered = True
@@ -71,18 +80,26 @@ class ColTaxonSchema(Schema):
         data['references'] = self.drop_long(data['references'])
         return data
 
+# data_key values added for GitHub issue #17
 class ColTaxonWithClassificationSchema(ColTaxonSchema):
-    kingdom = fields.String(missing=None)
-    phylum = fields.String(missing=None)
+    kingdom = fields.String(missing=None, data_key='dwc:kingdom')
+    phylum = fields.String(missing=None, data_key='dwc:phylum')
     subphylum = fields.String(missing=None)
-    class_ = fields.String(missing=None, data_key='class')
+    class_ = fields.String(missing=None, data_key='dwc:class')
     subclass = fields.String(missing=None)
-    order = fields.String(missing=None)
+    order = fields.String(missing=None, data_key='dwc:order')
     suborder = fields.String(missing=None)
     infraorder = fields.String(missing=None)
-    family = fields.String(missing=None)
+    family = fields.String(missing=None, data_key='dwc:family')
     genus = fields.String(missing=None)
     subgenus = fields.String(missing=None)
+
+
+# data_key values added for GitHub issue #17
+class ColVirusKingdomSchema(Schema):
+    taxon_id = fields.String(missing=None, data_key='taxon_id')
+    name = fields.String(missing=None, data_key='name')
+
 
 class ColDistributionSchema(Schema):
     taxonID = fields.String(data_key = 'dwc:taxonID')

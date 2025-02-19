@@ -660,7 +660,7 @@ class DwcAddAdditionalAPNIRelationships(ThroughTransform):
             reference_values = [record.accepted_name_usage, record.apc_relationship, record.accepted_name_usage_id]
             reference_lookup[record.scientific_name_id] = reference_values
 
-        for record in data.rows:  # if record has an matching reference lookup, add accepted name and status
+        for record in data.rows:  # if record has a matching reference lookup, add accepted name and status
             try:
                 if record.taxonID in reference_lookup:
                     modified = Record.copy(record)
@@ -783,7 +783,9 @@ class DwcAddAdditionalAPNISynonyms(ThroughTransform):
                 else:
                     # don't need to create accepted entry as the accepted entry is in the taxonomy
                     # but need to consider rule 3 and 4
-                    if record.apc_relationship != "excluded":  # ignore this row if excluded -> rule 4
+                    if record.apc_relationship != "excluded" and not "misapplied" in record.apc_relationship.lower():
+                        # ignore this row if excluded or misapplied -> rule 4
+                        # misapplied added to rule in Oct '24
                         taxon_status_type = "unreviewedSynonym"
                        # if (record.apc_relationship != "accepted") and (
                        #         "synonym" not in record.apc_relationship):

@@ -1,7 +1,8 @@
 kingdom,taxonID,useDistribution,useDataset,useRank
 # For use with filling out additional kingdoms
+# Removed Chromista and Protoza for EOY-2024 Build
+# Chromista,C,false,false,false
+# Protozoa,Z,false,false,false
 Archaea,R,false,false,false
 Bacteria,B,false,false,false
-Chromista,C,false,false,false
-Protozoa,Z,false,false,false
 Viruses,V,false,false,false

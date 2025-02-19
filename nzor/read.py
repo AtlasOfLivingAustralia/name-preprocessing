@@ -86,6 +86,19 @@ def species_and_below(record: Record):
     return record.taxonRank in SPECIES_RANKS
 
 
+def filter_kingdoms(kingdom):
+    keep = True
+    if kingdom == 'Animalia':
+        keep = False
+    return keep
+
+def filter_managed(taxon_id, managed_list):
+    # remove taxon entries that are listed as manged (species and below)
+    keep = True
+    if taxon_id in managed_list:
+        keep = False
+    return keep
+
 def reader() -> Orchestrator:
     taxon_file = "taxon.txt"
     vernacular_file = "vernacularname.txt"
@@ -95,6 +108,7 @@ def reader() -> Orchestrator:
     nomenclatural_code_file = "Nomenclatural_Code_Map.csv"
     location_map_file = "Location_Lookup.csv"
     location_file = "Location.csv"
+    included_kingdoms = "Accepted_Kingdoms.csv"
     nzor_taxon_schema = NzorTaxonSchema()
     nzor_vernacular_schema = NzorVernacularSchema()
     nzor_distribution_schema = NzorDistributionSchema()
@@ -103,7 +117,8 @@ def reader() -> Orchestrator:
     nomenclatural_code_schema = NomenclaturalCodeMapSchema()
     location_map_schema = LocationMapSchema()
     location_schema = LocationSchema()
-
+    exclude_names = set(['Biota', 'Eukaryota'])
+    managed_list_id = []
     rank_map = CsvSource.create("rank_map", rank_file, "ala", nzor_rank_map_schema)
     language_map = CsvSource.create("language_map", language_file, "ala", nzor_language_map_schema)
     nomenclatural_code_map = CsvSource.create("nomenclatual_code_map", nomenclatural_code_file, "ala",
@@ -121,14 +136,14 @@ def reader() -> Orchestrator:
                                           lookup_map={'taxonRank': 'taxonRank1'})
     taxon_ranked_2 = LookupTransform.create("taxon_ranked_2", taxon_ranked.output, rank_map.output, 'taxonRank', 'rank',
                                             lookup_type=IndexType.FIRST, lookup_map={'taxonRank': 'taxonRank2'})
-
-
-    taxon_rewrite = MapTransform.create("taxon_rewrite", taxon_ranked_2 .output, TaxonSchema(), {
+    # Change to parentNameUsageID - if rank is kingdom, remove any parentNameUsageID
+    taxon_rewrite = MapTransform.create("taxon_rewrite", taxon_ranked_2.output, TaxonSchema(), {
         'datasetID': MapTransform.default('datasetID'),
-        'parentNameUsageID': (lambda r: r.parentNameUsageID if r.taxonID == r.acceptedNameUsageID else None),
+        'parentNameUsageID': (lambda r: r.parentNameUsageID if ((r.taxonID == r.acceptedNameUsageID
+                                                                and r.taxonRank != 'kingdom') or not r.acceptedNameUsageID) else None),
         'acceptedNameUsageID': (lambda r: r.acceptedNameUsageID if r.taxonID != r.acceptedNameUsageID else None),
         'taxonomicStatus': (
-            lambda r: choose(r.taxonomicStatus, 'accepted' if r.taxonID == r.acceptedNameUsageID else 'synonym')),
+            lambda r: choose(r.taxonomicStatus, 'accepted' if (r.taxonID == r.acceptedNameUsageID or not r.acceptedNameUsageID) else 'synonym')),
         'taxonRank': (lambda r: choose(r.taxonRank1, r.taxonRank2, r.taxonRank)),
         'scientificName': (
             lambda r: split_scientific(r.scientificName, r.scientificNameAuthorship, r.namePublishedInYear)[0]),
@@ -143,10 +158,21 @@ def reader() -> Orchestrator:
         'kingdom': (lambda r: clean_uninomial(r.kingdom)),
         'source': 'scientificNameID'
     }, auto=True)
+    # Added additional kingdoms to filters, plus removed entries with no kingdom value (e.g biotic, Eukaryota)
+    # taxon_filtered = FilterTransform.create("taxon_filtered", taxon_rewrite.output,
+    #                                         lambda
+    #                                             r: r.kingdom != 'Animalia' and r.kingdom != 'Bacteria' and r.kingdom != 'Chromista'
+    #                                                and r.kingdom != 'Protozoa' and r.kingdom != 'Fungi' and r.kingdom != ''
+    #                                                and r.kingdom)
     taxon_filtered = FilterTransform.create("taxon_filtered", taxon_rewrite.output,
-                                            lambda r: r.kingdom != 'Animalia')
+                                            lambda
+                                                r: r.kingdom != 'Animalia' and r.kingdom != 'Bacteria' and r.kingdom != 'Virus'
+                                                   and r.kingdom != 'Protozoa' and r.kingdom != 'Viroid' and r.kingdom != 'Archaea' and r.kingdom != ''
+                                                   and r.kingdom)
+    # taxon_filtered = FilterTransform.create("taxon_filtered", taxon_rewrite.output,
+    #                                         lambda r: filter_kingdoms(r.kingdom))
     taxon_output = CsvSink.create("taxon_output", taxon_filtered.output, "taxon.csv", "excel", reduce=True)
-    #taxon_output = CsvSink.create("taxon_output", taxon_rewrite.output, "taxon.csv", "excel", reduce=True)
+    # taxon_output = CsvSink.create("taxon_output", taxon_rewrite.output, "taxon.csv", "excel", reduce=True)
     vernacular_source = CsvSource.create("vernacular_source", vernacular_file, 'excel-tab', nzor_vernacular_schema,
                                          no_errors=False)
     vernacular_mapped = LookupTransform.create('vernacular_mapped', vernacular_source.output, language_map.output,

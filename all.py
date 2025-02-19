@@ -117,6 +117,7 @@ selector = Selector.create(
     col.read.reader(args.col_reference, args.col_genus),
     nsl.read.reader(),
     nsl.read.additional_reader(),
+    nsl.read.nsk_reader(),
     nzor.read.reader(),
     github.read.reader(),
     dummy

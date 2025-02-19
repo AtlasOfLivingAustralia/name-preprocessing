@@ -4,7 +4,7 @@ afd,afd,AFD,,,dr2699,ICZN,Australian Biological Resources Study,,Animalia,,,,,,,
 apni,additional_nsl,APNI,APC,"APNI,NSL",dr2700,ICN,Australian Biological Resources Study,,Plantae,,,,,,,,
 apc,nsl,APC,,"APC,NSL",dr5214,ICN,Australian Biological Resources Study,,Plantae,,,,,,,,
 ausfungi,nsl,AusFungi,,"AusFungi,NSL",dr19724,ICN,Royal Botanic Gardens Victoria,,Fungi,,,,,,,,
-ausmoss,nsl,AusMoss,,"AusMoss,NSL",dr2703,ICN,Royal Botanic Gardens Victoria,,Bryophytes,,,,,,,,
+ausmoss,nsl_nk,AusMoss,,"AusMoss,NSL",dr2703,ICN,Royal Botanic Gardens Victoria,,Bryophytes,,,,,,,,
 lichens,nsl,Lichens,,"Lichens,NSL",dr17664,ICN,Australian Biological Resources Study,,"Ascomycota, Basidiomycota",,,,,,,,
 caab,caab_standard,CAAB,,,dr2704,,CSIRO,,,https://www.marine.csiro.au/data/caab/taxon_report.cfm?caab_code=,,,,,,,
 caab_code,caab_code,CAABCode,CAAB,CAAB,dr2704,,CSIRO,,,https://www.marine.csiro.au/data/caab/taxon_report.cfm?caab_code=,,,,,,,
@@ -25,3 +25,4 @@ dr24512,ala_vernacular_list,dr24512,,ALA,dr24512,,,,,,preferred,,,,,,en
 dr24514,ala_vernacular_list,dr24514,,ALA,dr24514,,,,,,preferred,,,,,,en
 dr24516,ala_vernacular_list,dr24516,,ALA,dr24516,,,,,,preferred,,,,,,en
 dr24517,ala_vernacular_list,dr24517,,ALA,dr24517,,,,,,preferred,,,,,,en
+ausalgae,nsl,AusAlgae,,"AusAlgae,NSL",dr28035,ICN,Australian Biological Resources Study,,Eukaryota,,,,,,,,

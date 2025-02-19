@@ -18,7 +18,7 @@ import attr
 from ala.transform import PublisherSource, CollectorySource
 from col.schema import ColTaxonSchema, ColDistributionSchema, ColVernacularSchema, ColAcceptedKingdomSchema, \
     ColAcceptedDatasetSchema, ColAcceptedLocationSchema, ColAcceptedLanguageSchema, ColTaxonWithClassificationSchema, \
-    ColAcceptedRankSchema
+    ColAcceptedRankSchema, ColVirusKingdomSchema
 from dwc.meta import MetaFile, EmlFile
 from dwc.schema import TaxonSchema, VernacularSchema, TaxonomicStatusMapSchema, NomenclaturalCodeMapSchema, \
     LocationSchema, DistributionSchema, LocationIdentifierMapSchema
@@ -33,6 +33,8 @@ from processing.transform import normalise_spaces, LookupTransform, Predicate, F
 
 MR_RECORD = re.compile("mrgid:(\\d+)")
 TDWG_RECORD = re.compile("tdwg:([\\d\\w\\-]+)")
+
+
 def id_records(r: Record) -> bool:
     locationID = r.locationID
     return locationID is not None and MR_RECORD.fullmatch(locationID) is not None
@@ -74,7 +76,7 @@ class ColUsePredicate(Predicate):
         if self.distributions is not None:
             distrbutions = context.acquire(self.distributions)
             self.distribution_keys = Keys.make_keys(self.distributions.schema, 'taxonID')
-            self.distribution_index = Index.create(distrbutions, self.distribution_keys,  IndexType.FIRST)
+            self.distribution_index = Index.create(distrbutions, self.distribution_keys, IndexType.FIRST)
 
     def execute(self, context: ProcessingContext):
         pass
@@ -96,6 +98,7 @@ class ColUsePredicate(Predicate):
             if rr is None:
                 return False
         return True
+
 
 @attr.s
 class ColLocationPredicate(Predicate):
@@ -122,11 +125,13 @@ class ColLocationPredicate(Predicate):
             return False
         return True
 
+
 def clean_author(name: str, author: str):
     index = name.find(author)
     if index > 0:
         name = name[:index] + ' ' + name[index + len(author):]
     return name
+
 
 def clean_scientific(name: str, author: str):
     if author is None:
@@ -135,11 +140,25 @@ def clean_scientific(name: str, author: str):
     name = clean_author(name, ' ' + author)
     return normalise_spaces(name)
 
+
 def clean_name(name: str):
     return None if name == 'Not assigned' else name
 
+
 def make_identifier(record: Record):
     return 'https://www.catalogueoflife.org/data/taxon/' + str(record.taxonID)
+
+# Added for GitHub Issue #17
+def check_virus_realm(record: Record):
+    if record.parentNameUsageID == "https://www.catalogueoflife.org/data/taxon/V" and record.taxonRank.lower() == "realm":
+        return True
+    else:
+        return False
+def check_virus_kingdoms(record: Record, taxon_virus_realms_ids: []):
+    if record.parentNameUseageID in taxon_virus_realms_ids:
+        return True
+    else:
+        return False
 
 
 def reader(use_reference: bool, all_genus: bool) -> Orchestrator:
@@ -162,6 +181,7 @@ def reader(use_reference: bool, all_genus: bool) -> Orchestrator:
     location_identifier_file = "Location_Identifiers.csv"
     reference_file = "reference.csv"
     exclude_names = set(['Biota'])
+    virus_realms_and_kingdoms_file = "col-virus-realms-and-kingdoms.csv"
 
     col_taxon_schema = ColTaxonSchema()
     col_taxon_with_classification_schema = ColTaxonWithClassificationSchema()
@@ -176,15 +196,50 @@ def reader(use_reference: bool, all_genus: bool) -> Orchestrator:
     col_nomenclatural_code_map_schema = NomenclaturalCodeMapSchema()
     location_schema = LocationSchema()
     location_identifier_map_schema = LocationIdentifierMapSchema()
+    col_virus_realms_and_kingdoms_schema = ColVirusKingdomSchema()
 
     with Orchestrator('col') as orchestrator:
         # Only use those taxa from a list of accepted kingdoms and, for some kingdoms, specific locations and datasets
-        accepted_kingdoms = CsvSource.create("accepted_kingdoms", accepted_kingdom_file, "ala", col_accepted_kingdom_schema)
-        accepted_datasets = CsvSource.create("accepted_datasets", accepted_dataset_file, "ala", col_accepted_dataset_schema)
-        accepted_languages = CsvSource.create("accepted_languages", accepted_language_file, "ala", col_accepted_language_schema)
-        accepted_ranks = CsvSource.create("accepted_ranks", accepted_rank_file, "ala", col_accepted_rank_schema) if all_genus else NullSource.create('accepted_ranks', col_accepted_rank_schema)
-        taxonomic_status_map = CsvSource.create("taxonomic_status_map", taxonomic_status_file, "ala", col_taxonomic_status_map_schema)
-        nomenclautural_code_map = CsvSource.create("nomenclatural_code_map", nomenclautural_code_file, "ala", col_nomenclatural_code_map_schema)
+        accepted_kingdoms = CsvSource.create("accepted_kingdoms", accepted_kingdom_file, "ala",
+                                             col_accepted_kingdom_schema)
+        accepted_datasets = CsvSource.create("accepted_datasets", accepted_dataset_file, "ala",
+                                             col_accepted_dataset_schema)
+        accepted_languages = CsvSource.create("accepted_languages", accepted_language_file, "ala",
+                                              col_accepted_language_schema)
+        accepted_ranks = CsvSource.create("accepted_ranks", accepted_rank_file, "ala",
+                                          col_accepted_rank_schema) if all_genus else NullSource.create(
+            'accepted_ranks', col_accepted_rank_schema)
+        taxonomic_status_map = CsvSource.create("taxonomic_status_map", taxonomic_status_file, "ala",
+                                                col_taxonomic_status_map_schema)
+        nomenclautural_code_map = CsvSource.create("nomenclatural_code_map", nomenclautural_code_file, "ala",
+                                                   col_nomenclatural_code_map_schema)
+        virus_realms_and_kingdoms = CsvSource.create("virus_realms_and_kingdoms", virus_realms_and_kingdoms_file, "ala",col_virus_realms_and_kingdoms_schema)
+        virus_realms_and_kingdoms_names = ["Bamfordvirae",
+                                            "Loebvirae",
+                                            "Zilligvirae",
+                                            "Shotokuvirae",
+                                            "Orthornavirae",
+                                            "Trapavirae",
+                                            "Sangervirae",
+                                            "Helvetiavirae",
+                                            "Pararnavirae",
+                                            "Heunggongvirae"]
+        virus_realms_and_kingdoms_ids = ["8TRHR",
+                                        "8TRHT",
+                                        "8TRHV",
+                                        "8TRHS",
+                                        "8TRHW",
+                                        "8TRHX",
+                                        "8TRHY",
+                                        "8TRJ3",
+                                        "8TRJ9",
+                                        "8TRJ7",
+                                        "8TRJ4",
+                                        "8TRJ8",
+                                        "8TRJ6",
+                                        "8TRHZ",
+                                        "8TRJ5",
+                                        "8TRJ2"]
         # Initial use predicate - filter by kingdom
         if use_reference:
             taxon_source = NullNode.create('taxon_source')
@@ -195,28 +250,72 @@ def reader(use_reference: bool, all_genus: bool) -> Orchestrator:
             taxon_trail = NullNode('taxon_trail')
             taxon_synonyms = NullNode('taxon_synonyms')
             taxon_synonyms_new = NullNode('taxon_synonyms_new')
-            taxon_complete = CsvSource.create("taxon_complete", reference_file, 'excel', col_taxon_with_classification_schema, no_errors=False)
+            taxon_complete = CsvSource.create("taxon_complete", reference_file, 'excel',
+                                              col_taxon_with_classification_schema, no_errors=False)
         else:
-            taxon_source = CsvSource.create("taxon_source", taxon_file, 'col', col_taxon_schema, no_errors=False, encoding='utf-8-sig', post_gc=True)
-            taxon_with_kingdom = DwcTaxonParent.create('taxon_with_kingdom', taxon_source.output, 'taxonID', 'parentNameUsageID', 'acceptedNameUsageID', 'scientificName', 'scientificNameAuthorship', 'taxonRank', kingdoms=accepted_kingdoms.output)
+            taxon_source = CsvSource.create("taxon_source", taxon_file, 'col', col_taxon_schema, no_errors=False,
+                                            encoding='utf-8-sig', post_gc=True)
+            taxon_with_kingdom = DwcTaxonParent.create('taxon_with_kingdom', taxon_source.output, 'taxonID',
+                                                       'parentNameUsageID', 'acceptedNameUsageID', 'scientificName',
+                                                       'scientificNameAuthorship', 'taxonRank',
+                                                       kingdoms=accepted_kingdoms.output)
             # Only include taxa by kingdom, dataset, distribution, rank
-            col_filter_predicate = ColUsePredicate('col_filter', accepted_kingdoms.output, None, None, accepted_ranks.output, exclude_names)
-            taxon_use = FilterTransform.create("taxon_use", taxon_with_kingdom.output, col_filter_predicate)
-            taxon_trail = TrailTransform.create("taxon_trail", taxon_use.output, taxon_with_kingdom.output, 'taxonID',
+            col_filter_predicate = ColUsePredicate('col_filter', accepted_kingdoms.output, None, None,
+                                                   accepted_ranks.output, exclude_names)
+            #17 - remap virus kingdoms and realms to change parent ids and value in kingdom column
+            virus_map =  MapTransform.create("virus_map", taxon_with_kingdom.output, TaxonSchema(), {
+            'parentNameUsageID': lambda
+                r: 'V' if r.parentNameUsageID in  virus_realms_and_kingdoms_ids else r.parentNameUsageID,
+            'datasetID': MapTransform.default('datasetID'),
+            'scientificName': lambda r: clean_scientific(r.scientificName, r.scientificNameAuthorship),
+            'kingdom': lambda r: 'Viruses' if r.kingdom in virus_realms_and_kingdoms_names else clean_name(r.kingdom),
+            'phylum': lambda r: clean_name(r.phylum),
+            'class_': lambda r: clean_name(r.class_),
+            'order': lambda r: clean_name(r.order),
+            'family': lambda r: clean_name(r.family),
+            'genus': lambda r: clean_name(r.genus),
+            'specificEpithet': lambda r: clean_name(r.specificEpithet),
+            'infraspecificEpithet': lambda r: clean_name(r.infraspecificEpithet),
+            'taxonomicStatus': lambda r: choose(r.mappedTaxonomicStatus, r.taxonomicStatus,
+                                                'inferredSynonym' if r.acceptedNameUsageID is not None else 'inferredAccepted'),
+            'source': 'taxonID'
+        }, auto=True)
+
+            #change taxon_use to use virus_map output
+            taxon_use = FilterTransform.create("taxon_use", virus_map.output, col_filter_predicate)
+            # taxon_use = FilterTransform.create("taxon_use", taxon_with_kingdom.output, col_filter_predicate)
+            virus_map_output = CsvSink.create("virus_map_output", taxon_use.output,
+                                              "post_virus_map.csv", "excel", reduce=True)
+
+            taxon_trail = TrailTransform.create("taxon_trail", taxon_use.output, virus_map.output, 'taxonID',
                                                 'parentNameUsageID', 'acceptedNameUsageID', col_filter_predicate)
             # Load synonyms
-            taxon_synonyms = AcceptTransform.create('taxon_synonyms', taxon_with_kingdom.output, taxon_trail.output, 'acceptedNameUsageID', 'taxonID')
-            taxon_synonyms_new = AcceptTransform.create('taxon_synonyms_new', taxon_synonyms.output, taxon_trail.output, 'taxonID', 'taxonID', exclude=True)
+            taxon_synonyms = AcceptTransform.create('taxon_synonyms', virus_map.output, taxon_trail.output,
+                                                    'acceptedNameUsageID', 'taxonID')
+            # taxon_trail = TrailTransform.create("taxon_trail", taxon_use.output, taxon_with_kingdom.output, 'taxonID',
+            #                                     'parentNameUsageID', 'acceptedNameUsageID', col_filter_predicate)
+            # # Load synonyms
+            # taxon_synonyms = AcceptTransform.create('taxon_synonyms', taxon_with_kingdom.output, taxon_trail.output,
+            #                                         'acceptedNameUsageID', 'taxonID')
+            taxon_synonyms_new = AcceptTransform.create('taxon_synonyms_new', taxon_synonyms.output, taxon_trail.output,
+                                                        'taxonID', 'taxonID', exclude=True)
             taxon_complete = MergeTransform.create('taxon_complete', taxon_trail.output, taxon_synonyms_new.output)
             # Use the reference one for faster loading if you have run this once.
-            #taxon_source = CsvSource.create("taxon_source", 'reference.csv', 'excel', col_taxon_schema, no_errors=False, predicate=col_use_predciate)
+            # taxon_source = CsvSource.create("taxon_source", 'reference.csv', 'excel', col_taxon_schema, no_errors=False, predicate=col_use_predciate)
             CsvSink.create("taxon_used_reference", taxon_complete.output, "reference.csv", "excel", work=True)
         # Initial distro predicate - allowed locations
         # col_location_predicate = ColLocationPredicate('col_location_use', accepted_locations.output)
-        taxon_status_mapped = LookupTransform.create("taxon_status_mapped", taxon_complete.output, taxonomic_status_map.output, 'taxonomicStatus', 'Term', lookup_map={'DwC': 'mappedTaxonomicStatus'})
-        taxon_code_mapped = LookupTransform.create("nomenclatural_code_mapped", taxon_status_mapped.output, nomenclautural_code_map.output, 'kingdom', 'kingdom')
-        taxon_reidentify = DwcTaxonReidentify.create("taxon_reidentify", taxon_code_mapped.output, 'taxonID', 'parentNameUsageID', 'acceptedNameUsageID', make_identifier)
+        taxon_status_mapped = LookupTransform.create("taxon_status_mapped", taxon_complete.output,
+                                                     taxonomic_status_map.output, 'taxonomicStatus', 'Term',
+                                                     lookup_map={'DwC': 'mappedTaxonomicStatus'})
+        taxon_code_mapped = LookupTransform.create("nomenclatural_code_mapped", taxon_status_mapped.output,
+                                                   nomenclautural_code_map.output, 'kingdom', 'kingdom')
+        taxon_reidentify = DwcTaxonReidentify.create("taxon_reidentify", taxon_code_mapped.output, 'taxonID',
+                                                     'parentNameUsageID', 'acceptedNameUsageID', make_identifier)
+
         taxon_map = MapTransform.create("taxon_map", taxon_reidentify.output, TaxonSchema(), {
+            'parentNameUsageID': lambda
+                r: 'https://www.catalogueoflife.org/data/taxon/V' if r.parentNameUsageID in virus_realms_and_kingdoms_ids else r.parentNameUsageID,
             'datasetID': MapTransform.default('datasetID'),
             'scientificName': lambda r: clean_scientific(r.scientificName, r.scientificNameAuthorship),
             'kingdom': lambda r: clean_name(r.kingdom),
@@ -227,17 +326,32 @@ def reader(use_reference: bool, all_genus: bool) -> Orchestrator:
             'genus': lambda r: clean_name(r.genus),
             'specificEpithet': lambda r: clean_name(r.specificEpithet),
             'infraspecificEpithet': lambda r: clean_name(r.infraspecificEpithet),
-            'taxonomicStatus': lambda r: choose(r.mappedTaxonomicStatus, r.taxonomicStatus, 'inferredSynonym' if r.acceptedNameUsageID is not None else 'inferredAccepted'),
+            'taxonomicStatus': lambda r: choose(r.mappedTaxonomicStatus, r.taxonomicStatus,
+                                                'inferredSynonym' if r.acceptedNameUsageID is not None else 'inferredAccepted'),
             'source': 'taxonID'
         }, auto=True)
         taxon_validate = DwcTaxonValidate.create("taxon_validate", taxon_map.output, check_names=False)
-        taxon_output = CsvSink.create("taxon_output", taxon_validate.output, "taxon.csv", "excel", reduce=True)
-        taxon_mapping = CsvSink.create('taxon_mapping', taxon_reidentify.mapping, "identifier_mapping.csv", "excel", work=True)
+        # add filter to remove unwanted records from viruses
+        taxon_filtered = FilterTransform.create('taxon_filtered', taxon_validate.output,
+                                         lambda r: not (r.kingdom == 'Viruses' and r.taxonRank in
+                                                    ['realm',
+                                                     'kingdom',
+                                                     ]))
 
-        vernacular_source = CsvSource.create("vernacular_source", vernacular_file, 'col', col_vernacular_schema, no_errors=False, encoding='utf-8-sig')
-        vernacular_language = LookupTransform.create("vernacular_language", vernacular_source.output, accepted_languages.output, 'language', 'language', reject=True)
-        vernacular_use = LookupTransform.create("vernacular_use", vernacular_language.output, taxon_complete.output, 'taxonID', 'taxonID', reject=True, merge=False)
-        vernacular_reidentify = LookupTransform.create("vernacular_reidentify", vernacular_use.output, taxon_reidentify.mapping, 'taxonID', 'term', lookup_map={'mapping': 'mappedTaxonID'})
+        taxon_output = CsvSink.create("taxon_output", taxon_filtered.output, "taxon.csv", "excel", reduce=True)
+       # taxon_output = CsvSink.create("taxon_output", taxon_validate.output, "taxon.csv", "excel", reduce=True)
+        taxon_mapping = CsvSink.create('taxon_mapping', taxon_reidentify.mapping, "identifier_mapping.csv", "excel",
+                                       work=True)
+
+        vernacular_source = CsvSource.create("vernacular_source", vernacular_file, 'col', col_vernacular_schema,
+                                             no_errors=False, encoding='utf-8-sig')
+        vernacular_language = LookupTransform.create("vernacular_language", vernacular_source.output,
+                                                     accepted_languages.output, 'language', 'language', reject=True)
+        vernacular_use = LookupTransform.create("vernacular_use", vernacular_language.output, taxon_complete.output,
+                                                'taxonID', 'taxonID', reject=True, merge=False)
+        vernacular_reidentify = LookupTransform.create("vernacular_reidentify", vernacular_use.output,
+                                                       taxon_reidentify.mapping, 'taxonID', 'term',
+                                                       lookup_map={'mapping': 'mappedTaxonID'})
         vernacular_map = MapTransform.create("vernacular_map", vernacular_reidentify.output, VernacularSchema(), {
             'taxonID': 'mappedTaxonID',
             'nameID': lambda r: 'col:vernacular:' + str(r.line),
@@ -246,29 +360,43 @@ def reader(use_reference: bool, all_genus: bool) -> Orchestrator:
             'status': MapTransform.constant('common'),
             'isPreferredName': MapTransform.constant(False)
         }, auto=True)
-        vernacular_output = CsvSink.create("vernacular_output", vernacular_map.output, "vernacularName.csv", "excel", reduce=True)
+        vernacular_output = CsvSink.create("vernacular_output", vernacular_map.output, "vernacularName.csv", "excel",
+                                           reduce=True)
 
-        distribution_source = CsvSource.create("distribution_source", distribution_file, 'col', col_distribution_schema, no_errors=False, encoding='utf-8-sig', predicate=id_records)
+        distribution_source = CsvSource.create("distribution_source", distribution_file, 'col', col_distribution_schema,
+                                               no_errors=False, encoding='utf-8-sig', predicate=id_records)
         location = CsvSource.create("location", location_file, 'ala', location_schema)
-        location_identifier_source = CsvSource.create("location_identifier_source", location_identifier_file, 'ala', location_identifier_map_schema)
-        location_identifier_map = LookupTransform.create("location_identifier_map", location_identifier_source.output, location.output, 'locationID', 'locationID', lookup_prefix='c_')
-        distribution_used = AcceptTransform.create('distribution_used', distribution_source.output, taxon_complete.output, 'taxonID', 'taxonID')
-        dwc_distribution = LookupTransform.create('dwc_distribution', distribution_used.output, location_identifier_map.output, 'locationID', 'identifier', record_unmatched=True, lookup_prefix='m_')
-        dwc_distribution_reidentify = LookupTransform.create("dwc_distribution_reidentify", dwc_distribution.output, taxon_reidentify.mapping, 'taxonID', 'term', lookup_map={'mapping': 'mappedTaxonID'}, reject=True)
-        dwc_distribution_mapped = MapTransform.create("dwc_distribution_mapped", dwc_distribution_reidentify.output, DistributionSchema(), {
-            'taxonID': 'mappedTaxonID',
-            'locationID': MapTransform.choose('m_locationID', 'locationID'),
-            'locality': 'm_mappedLocality',
-            'countryCode': 'countryCode',
-            'establishmentMeans': 'occurrenceStatus',
-            'datasetID': MapTransform.default('datasetID'),
-            'provenance': lambda r: f"Original locationID {r.locationID}" + ('' if r.m_mappedLocality == r.m_locality else f" locality {r.m_locality}")
-        })
-        dwc_distribution_output = CsvSink.create("distribution_output", dwc_distribution_mapped.output, "distribution.csv", "excel", reduce=True)
+        location_identifier_source = CsvSource.create("location_identifier_source", location_identifier_file, 'ala',
+                                                      location_identifier_map_schema)
+        location_identifier_map = LookupTransform.create("location_identifier_map", location_identifier_source.output,
+                                                         location.output, 'locationID', 'locationID',
+                                                         lookup_prefix='c_')
+        distribution_used = AcceptTransform.create('distribution_used', distribution_source.output,
+                                                   taxon_complete.output, 'taxonID', 'taxonID')
+        dwc_distribution = LookupTransform.create('dwc_distribution', distribution_used.output,
+                                                  location_identifier_map.output, 'locationID', 'identifier',
+                                                  record_unmatched=True, lookup_prefix='m_')
+        dwc_distribution_reidentify = LookupTransform.create("dwc_distribution_reidentify", dwc_distribution.output,
+                                                             taxon_reidentify.mapping, 'taxonID', 'term',
+                                                             lookup_map={'mapping': 'mappedTaxonID'}, reject=True)
+        dwc_distribution_mapped = MapTransform.create("dwc_distribution_mapped", dwc_distribution_reidentify.output,
+                                                      DistributionSchema(), {
+                                                          'taxonID': 'mappedTaxonID',
+                                                          'locationID': MapTransform.choose('m_locationID',
+                                                                                            'locationID'),
+                                                          'locality': 'm_mappedLocality',
+                                                          'countryCode': 'countryCode',
+                                                          'establishmentMeans': 'occurrenceStatus',
+                                                          'datasetID': MapTransform.default('datasetID'),
+                                                          'provenance': lambda
+                                                              r: f"Original locationID {r.locationID}" + (
+                                                              '' if r.m_mappedLocality == r.m_locality else f" locality {r.m_locality}")
+                                                      })
+        dwc_distribution_output = CsvSink.create("distribution_output", dwc_distribution_mapped.output,
+                                                 "distribution.csv", "excel", reduce=True)
 
         MetaFile.create('dwc_meta', taxon_output, vernacular_output, dwc_distribution_output)
         publisher = PublisherSource.create('publisher')
         metadata = CollectorySource.create('metadata')
         EmlFile.create('dwc_eml', metadata.output, publisher.output)
     return orchestrator
-
