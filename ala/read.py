@@ -33,7 +33,7 @@ def reader() -> Orchestrator:
                                                   NomenclaturalCodeMapSchema())
         default_codes = LookupTransform.create('default_nomenclatural_codes', dwc_renamed.output,
                                                nomenclatural_code_map.output, 'kingdom', 'kingdom', overwrite=True)
-        dwc_base = DwcTaxonValidate.create("species_validate", default_codes.output, check_names=True, no_errors=True)
+        dwc_base = DwcTaxonValidate.create("species_validate", default_codes.output, check_names=True, no_errors=False)
         dwc_taxon = DwcSyntheticNames.create("synthetic_names", dwc_base.output)
         dwc_taxon_output = CsvSink.create("dwc_taxon", dwc_taxon.output, "taxon.csv", "excel", reduce=True)
         vernacular_list = FilterTransform.create("vernacular_list", species_list.output,
