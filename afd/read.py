@@ -92,7 +92,7 @@ def reader():
         status_source = CsvSource.create("status_source", taxonomic_status_map_file, "ala", taxonomic_status_schema)
         name_lookup = LookupTransform.create("name_status_lookup", name_filter.output, status_source.output, ('TYPE', 'SUBTYPE'), ('Type', 'Subtype'), reject=True, record_unmatched=True)
 
-        reference_source = CsvSource.create("reference_source", reference_file, "excel", reference_schema, no_errors=False)
+        reference_source = CsvSource.create("reference_source", reference_file, "afd", reference_schema, no_errors=False)
         publication_source = CsvSource.create("publication_source", publication_file, "afd", publication_schema, no_errors=False)
         publication_format = PublicationTransform.create("publication_format", publication_source.output, 'PARENT_PUBLICATION_ID', 'PUBLICATION_ID')
         publication_output = CsvSink.create("publication_sink", publication_format.output, "publication.csv", "excel", True)

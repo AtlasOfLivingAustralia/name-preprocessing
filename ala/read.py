@@ -86,6 +86,7 @@ def vernacular_list_reader() -> Orchestrator:
     with Orchestrator("ala_vernacular_list") as orchestrator:
         vernacular_list = VernacularListSource.create('vernacular_list', aliases={
             'vernacular name': 'vernacularName',
+            'raw Vernacular Name': 'vernacularName',
             'Birdlife Common Name': 'vernacularName',
             'preferred Vernacular Name': 'vernacularName',
             'Preferred Vernacular Name': 'vernacularName',

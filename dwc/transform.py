@@ -752,7 +752,7 @@ class DwcAddAdditionalAPNISynonyms(ThroughTransform):
         for record in reference_data.rows:  # generate a reference lookup for the synonym relationships
             if record.relationship:  # Filter out the rows that have relationships
 
-                if not record.accepted_name_usage_id:  # both are unplaced Rule 2
+                if not record.apc_relationship:  # both are unplaced Rule 2
                     # accepted_entry = result_dictionary(r_entry.name_id,
                     #                                    r_entry.scientific_name,
                     #                                    "",
@@ -766,8 +766,11 @@ class DwcAddAdditionalAPNISynonyms(ThroughTransform):
                     #                                   "synonym",
                     #                                   r_entry.scientific_name,
                     #                                   r_entry.name_id)
-                    reference_values = [record.scientific_name_id, "unreviewedSynonym"]
-                    reference_lookup[record.second_name_id] = reference_values
+                    # reference_values = [record.scientific_name_id, "unreviewedSynonym"]
+                    # reference_lookup[record.second_name_id] = reference_values
+                    ### Changed file columns so that first name is always the synonym of the second name
+                    reference_values = [record.second_name_id, "unreviewedSynonym"]
+                    reference_lookup[record.scientific_name_id] = reference_values
 
                     # synonym_entry_key = synonym_entry["scientificName"] + "|" + synonym_entry["acceptedNameUsageId"]
                     # duplicate_synonym_store_key = synonym_entry["taxonId"] + "|" + synonym_entry["scientificName"]
